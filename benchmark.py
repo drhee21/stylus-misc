@@ -77,7 +77,6 @@ def compareHeuristic(algo1, algo2, ref_data, char_data, trials):
     print("The first algorithm scored", wins1, "genes more accurately than the second algorithm.")
     print("The second algorithm scored", wins2, "genes more accurately than the first algorithm.")
     print("The first and second algorithm scored", len(scores1)-wins1-wins2, "genes identically.")
-    print("")
 
 """
 Function to compare a heuristic algorithm's accuracy and performance against the exhaustive search.
@@ -129,7 +128,6 @@ def compareExhaustive(algo, ref_data, char_data, trials):
     print("The heuristic algorithm scored", wins1, "genes more accurately than the exhaustive search.")
     print("The exhaustive search scored", wins2, "genes more accurately than the heuristic algorithm.")
     print("The heuristic algorithm and exhaustive search scored", len(scores1)-wins1-wins2, "genes identically.")
-    print("")
 
 ref_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/Reference' # archetype directory
 data_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/NewGenes' # gene directory
@@ -148,3 +146,4 @@ while True:
     elif c == "2":
         trials = input("Amount of trials: ")
         compareHeuristic(alignStrokes, greedyAlign2, ref_data, char_data, int(trials))
+    print("")
