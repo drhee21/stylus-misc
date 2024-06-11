@@ -69,7 +69,9 @@ def compareHeuristic(algo1, algo2, ref_data, char_data, trials):
         elif score2 > score1:
             wins2 += 1
 
+    print("Running first algorithm...")
     results1 = timeit.timeit("benchmark(algo1)", number=trials, globals=locals())
+    print("Running second algorithm...")
     results2 = timeit.timeit("benchmark(algo2)", number=trials, globals=locals())
     print("The first algorithm took", results1, "seconds to execute", trials, "times.")
     print("The second algorithm took", results2, "seconds to execute", trials, "times.")
@@ -119,13 +121,15 @@ def compareExhaustive(algo, ref_data, char_data, trials):
         elif score2 > score1:
             wins2 += 1
 
+    print("Running greedy algorithm...")
     results1 = timeit.timeit("heuristic(algo)", number=trials, globals=locals())
+    print("Running exhaustive search...")
     results2 = timeit.timeit("exhaustive()", number=trials, globals=locals())
-    print("The heuristic algorithm took", results1, "seconds to execute", trials, "times.")
+    print("The greedy algorithm took", results1, "seconds to execute", trials, "times.")
     print("The exhaustive search took", results2, "seconds to execute", trials, "times.")
-    print("The heuristic algorithm scored", wins1, "genes more accurately than the exhaustive search.")
-    print("The exhaustive search scored", wins2, "genes more accurately than the heuristic algorithm.")
-    print("The heuristic algorithm and exhaustive search scored", len(scores1)-wins1-wins2, "genes identically.")
+    print("The greedy algorithm scored", wins1, "genes more accurately than the exhaustive search.")
+    print("The exhaustive search scored", wins2, "genes more accurately than the greedy algorithm.")
+    print("The greedy algorithm and exhaustive search scored", len(scores1)-wins1-wins2, "genes identically.")
 
 
 def compareDynamic(algo, ref_char, ref_data, char_data, trials):
@@ -146,12 +150,13 @@ def compareDynamic(algo, ref_char, ref_data, char_data, trials):
         return heuristic_scores, heuristic_alignments
 
     
+    
     def dynamic(ref_char, ref_data, char_data):
         ref, p_ref, _ = ref_data
         g_data, _, base_data, stroke_sets, _, f_names = char_data
-        stroke_priority = permutations(range(0, len(ref)))
         heuristic_scores = []
         for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
+            stroke_priority = permutations(range(0, len(ref)))
             stroke_maps = []
             compare_scores = []
             strokes, p_strokes = geometry_length
@@ -171,7 +176,6 @@ def compareDynamic(algo, ref_char, ref_data, char_data, trials):
                     stroke_map = np.array([n for n in stroke_map if n != -1])
                     stroke_maps.append(stroke_map)
             # Retrieve scores for each candidate stroke order
-            print(stroke_maps)
             for s in stroke_maps:
                 heuristic_xml = minXml(ref_char, bases, stroke_set, np.array(s)+1)
                 heuristic_score = getXmlScore(heuristic_xml)
@@ -191,15 +195,85 @@ def compareDynamic(algo, ref_char, ref_data, char_data, trials):
         elif score2 > score1:
             wins2 += 1
 
+    print("Running greedy algorithm...")
     results1 = timeit.timeit("heuristic(algo)", number=trials, globals=locals())
+    print("Running dynamic algorithm...")
     results2 = timeit.timeit("dynamic(ref_char, ref_data, char_data)", number=trials, globals=locals())
-    print("The heuristic algorithm took", results1, "seconds to execute", trials, "times.")
+    print("The greedy algorithm took", results1, "seconds to execute", trials, "times.")
     print("The dynamic algorithm took", results2, "seconds to execute", trials, "times.")
-    print("The heuristic algorithm scored", wins1, "genes more accurately than the dynamic algorithm.")
-    print("The dynamic algorithm scored", wins2, "genes more accurately than the heuristic algorithm.")
-    print("The heuristic algorithm and dynamic algorithm scored", len(scores1)-wins1-wins2, "genes identically.")
+    print("The greedy algorithm scored", wins1, "genes more accurately than the dynamic algorithm.")
+    print("The dynamic algorithm scored", wins2, "genes more accurately than the greedy algorithm.")
+    print("The greedy algorithm and dynamic algorithm scored", len(scores1)-wins1-wins2, "genes identically.")
 
 
+def compareDynamicExhaustive(ref_char, ref_data, char_data, trials):
+    ref_geometry, ref_progress_percentage, output_size = ref_data
+    g_data, han_chars, base_data, stroke_sets, _, f_names = char_data
+    
+    
+    def dynamic(ref_char, ref_data, char_data):
+        ref, p_ref, _ = ref_data
+        g_data, _, base_data, stroke_sets, _, f_names = char_data
+        heuristic_scores = []
+        for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
+            stroke_priority = permutations(range(0, len(ref)))
+            stroke_maps = []
+            compare_scores = []
+            strokes, p_strokes = geometry_length
+            # Find candidate stroke orders
+            for priority in stroke_priority:
+                error_maps = strokeErrorMatrix(strokes, ref, p_strokes, p_ref)
+                stroke_map = np.full(len(strokes), -1)
+                for i in priority:
+                    smallerror = np.argmin(error_maps[i]) # retrieve index of smallest error for current archetype stroke
+                    while(stroke_map[smallerror]!=-1):
+                        # change small error so that we do not repeat over indexes that are already taken
+                        # just keeps repeating until we land on an index that doesn't already have a value in its place
+                        error_maps[i][smallerror] = 10000
+                        smallerror = np.argmin(error_maps[i])
+                    stroke_map[smallerror] = i
+                if not any(np.array_equal(stroke_map, m) for m in stroke_maps):
+                    stroke_map = np.array([n for n in stroke_map if n != -1])
+                    stroke_maps.append(stroke_map)
+            # Retrieve scores for each candidate stroke order
+            for s in stroke_maps:
+                heuristic_xml = minXml(ref_char, bases, stroke_set, np.array(s)+1)
+                heuristic_score = getXmlScore(heuristic_xml)
+                compare_scores.append(heuristic_score)
+            heuristic_scores.append(max(compare_scores))
+        return heuristic_scores
+
+    def exhaustive():
+        exhaustive_scores = []
+        for (gl, han_char, bases, f_name) in zip(g_data, han_chars, base_data, f_names):
+            g, l = gl
+            exhaust_maxes = []
+            for e in computeExhaustive(ref_char, [f_name], data_dir, save = False, xml_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/GenXml/Exhaustive'):
+                exhaust_maxes.append(e.max())
+            original_score = np.max(exhaust_maxes)
+            exhaustive_scores.append(original_score)
+        return exhaustive_scores
+
+    wins1 = 0
+    wins2 = 0
+    scores1 = dynamic(ref_char, ref_data, char_data)
+    scores2 = exhaustive()
+
+    for (score1, score2) in zip(scores1, scores2):
+        if score1 > score2:
+            wins1 += 1
+        elif score2 > score1:
+            wins2 += 1
+
+    print("Running dynamic algorithm...")
+    results1 = timeit.timeit("dynamic(ref_char, ref_data, char_data)", number=trials, globals=locals())
+    print("Running exhaustive search...")
+    results2 = timeit.timeit("exhaustive()", number=trials, globals=locals())
+    print("The dynamic algorithm took", results1, "seconds to execute", trials, "times.")
+    print("The exhaustive search took", results2, "seconds to execute", trials, "times.")
+    print("The dynamic algorithm scored", wins1, "genes more accurately than the exhaustive search.")
+    print("The exhaustive search scored", wins2, "genes more accurately than the dynamic algorithm.")
+    print("The dynamic algorithm and exhaustive search scored", len(scores1)-wins1-wins2, "genes identically.")
 
 
 ref_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/Reference' # archetype directory
@@ -212,7 +286,7 @@ ref_data = loadRef(ref_char, ref_dir)
 char_data = loadGeometryBases(data_dir, ref_data[2])
 
 while True:
-    print("1. Exhaustive vs. Heuristic\n2. Dynamic vs. Heuristic\n3. Heuristic vs. Heuristic")
+    print("1. Exhaustive vs. Greedy\n2. Exhaustive vs. Dynamic\n3. Greedy vs. Dynamic\n4. Heuristic vs. Heuristic")
     print("Ctrl+C to exit")
     c = input("Choose an option: ")
     if c == "1":
@@ -220,8 +294,11 @@ while True:
         compareExhaustive(alignStrokes, ref_data, char_data, int(trials))
     elif c == "2":
         trials = input("Amount of trials: ")
-        compareDynamic(alignStrokes, ref_char, ref_data, char_data, int(trials))
+        compareDynamicExhaustive(ref_char, ref_data, char_data, int(trials))
     elif c == "3":
+        trials = input("Amount of trials: ")
+        compareDynamic(alignStrokes, ref_char, ref_data, char_data, int(trials))
+    elif c == "4":
         trials = input("Amount of trials: ")
         #compareHeuristic(alignStrokes, greedyAlign2, ref_data, char_data, int(trials))
     print("")
