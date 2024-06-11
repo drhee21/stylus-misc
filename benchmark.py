@@ -151,18 +151,16 @@ def compareDynamic(algo, ref_char, ref_data, char_data, trials):
 
     
     
-    def dynamic(ref_char, ref_data, char_data):
-        ref, p_ref, _ = ref_data
-        g_data, _, base_data, stroke_sets, _, f_names = char_data
+    def dynamic():
         heuristic_scores = []
         for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
-            stroke_priority = permutations(range(0, len(ref)))
+            stroke_priority = permutations(range(0, len(ref_geometry)))
             stroke_maps = []
             compare_scores = []
             strokes, p_strokes = geometry_length
             # Find candidate stroke orders
             for priority in stroke_priority:
-                error_maps = strokeErrorMatrix(strokes, ref, p_strokes, p_ref)
+                error_maps = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
                 stroke_map = np.full(len(strokes), -1)
                 for i in priority:
                     smallerror = np.argmin(error_maps[i]) # retrieve index of smallest error for current archetype stroke
@@ -187,7 +185,7 @@ def compareDynamic(algo, ref_char, ref_data, char_data, trials):
     wins1 = 0
     wins2 = 0
     scores1, _ = heuristic(algo)
-    scores2 = dynamic(ref_char, ref_data, char_data)
+    scores2 = dynamic()
 
     for (score1, score2) in zip(scores1, scores2):
         if score1 > score2:
@@ -198,7 +196,7 @@ def compareDynamic(algo, ref_char, ref_data, char_data, trials):
     print("Running greedy algorithm...")
     results1 = timeit.timeit("heuristic(algo)", number=trials, globals=locals())
     print("Running dynamic algorithm...")
-    results2 = timeit.timeit("dynamic(ref_char, ref_data, char_data)", number=trials, globals=locals())
+    results2 = timeit.timeit("dynamic()", number=trials, globals=locals())
     print("The greedy algorithm took", results1, "seconds to execute", trials, "times.")
     print("The dynamic algorithm took", results2, "seconds to execute", trials, "times.")
     print("The greedy algorithm scored", wins1, "genes more accurately than the dynamic algorithm.")
@@ -211,18 +209,16 @@ def compareDynamicExhaustive(ref_char, ref_data, char_data, trials):
     g_data, han_chars, base_data, stroke_sets, _, f_names = char_data
     
     
-    def dynamic(ref_char, ref_data, char_data):
-        ref, p_ref, _ = ref_data
-        g_data, _, base_data, stroke_sets, _, f_names = char_data
+    def dynamic():
         heuristic_scores = []
         for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
-            stroke_priority = permutations(range(0, len(ref)))
+            stroke_priority = permutations(range(0, len(ref_geometry)))
             stroke_maps = []
             compare_scores = []
             strokes, p_strokes = geometry_length
             # Find candidate stroke orders
             for priority in stroke_priority:
-                error_maps = strokeErrorMatrix(strokes, ref, p_strokes, p_ref)
+                error_maps = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
                 stroke_map = np.full(len(strokes), -1)
                 for i in priority:
                     smallerror = np.argmin(error_maps[i]) # retrieve index of smallest error for current archetype stroke
@@ -256,7 +252,7 @@ def compareDynamicExhaustive(ref_char, ref_data, char_data, trials):
 
     wins1 = 0
     wins2 = 0
-    scores1 = dynamic(ref_char, ref_data, char_data)
+    scores1 = dynamic()
     scores2 = exhaustive()
 
     for (score1, score2) in zip(scores1, scores2):
@@ -266,7 +262,7 @@ def compareDynamicExhaustive(ref_char, ref_data, char_data, trials):
             wins2 += 1
 
     print("Running dynamic algorithm...")
-    results1 = timeit.timeit("dynamic(ref_char, ref_data, char_data)", number=trials, globals=locals())
+    results1 = timeit.timeit("dynamic()", number=trials, globals=locals())
     print("Running exhaustive search...")
     results2 = timeit.timeit("exhaustive()", number=trials, globals=locals())
     print("The dynamic algorithm took", results1, "seconds to execute", trials, "times.")
