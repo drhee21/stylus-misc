@@ -8,8 +8,8 @@ import timeit
 
 import numpy as np
 
-from score_strokes import alignStrokes, greedyAlign2
-from xmlparse import loadGeometryBases, loadRef, getXmlScore, minXml
+from score_strokes import alignStrokes, greedyAlign2, strokeErrorMatrix
+from xmlparse import extractBases, loadGeometryBases, loadRef, getXmlScore, minXml
 
 ## I can't stop Jupyter Notebook from printing out the genome fitness for every single trial so it's better to put the code in a Python script.
 
@@ -37,7 +37,7 @@ def computeExhaustive(ref_char, f_read, data_dir, exhaust_dir = "Exhaustive", pr
             print(f"Wrote exhaustive scores to {save_file}")
             np.save(save_file, exhaustive_scores)
         yield exhaustive_scores
-        
+
 """
 Function to compare two heuristic algorithms' accuracy and performance.
 """
@@ -71,7 +71,6 @@ def compareHeuristic(algo1, algo2, ref_data, char_data, trials):
 
     results1 = timeit.timeit("benchmark(algo1)", number=trials, globals=locals())
     results2 = timeit.timeit("benchmark(algo2)", number=trials, globals=locals())
-    time.sleep(1) # to make it easier to find results
     print("The first algorithm took", results1, "seconds to execute", trials, "times.")
     print("The second algorithm took", results2, "seconds to execute", trials, "times.")
     print("The first algorithm scored", wins1, "genes more accurately than the second algorithm.")
@@ -122,22 +121,98 @@ def compareExhaustive(algo, ref_data, char_data, trials):
 
     results1 = timeit.timeit("heuristic(algo)", number=trials, globals=locals())
     results2 = timeit.timeit("exhaustive()", number=trials, globals=locals())
-    time.sleep(5) # to make it easier to find results
     print("The heuristic algorithm took", results1, "seconds to execute", trials, "times.")
     print("The exhaustive search took", results2, "seconds to execute", trials, "times.")
     print("The heuristic algorithm scored", wins1, "genes more accurately than the exhaustive search.")
     print("The exhaustive search scored", wins2, "genes more accurately than the heuristic algorithm.")
     print("The heuristic algorithm and exhaustive search scored", len(scores1)-wins1-wins2, "genes identically.")
 
+
+def compareDynamic(algo, ref_char, ref_data, char_data, trials):
+    ref_geometry, ref_progress_percentage, output_size = ref_data
+    g_data, han_chars, base_data, stroke_sets, _, f_names = char_data
+    
+    
+    def heuristic(algo):
+        heuristic_scores = []
+        heuristic_alignments = []
+        for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
+            geometry, progress_percentage = geometry_length
+            heuristic_alignment = np.array(algo(geometry, ref_geometry, progress_percentage, ref_progress_percentage))+1
+            heuristic_alignments.append(heuristic_alignment)
+            heuristic_xml = minXml(ref_char, bases, stroke_set, heuristic_alignment)
+            heuristic_score = getXmlScore(heuristic_xml)
+            heuristic_scores.append(heuristic_score)
+        return heuristic_scores, heuristic_alignments
+
+    
+    def dynamic(ref_char, ref_data, char_data):
+        ref, p_ref, _ = ref_data
+        g_data, _, base_data, stroke_sets, _, f_names = char_data
+        stroke_priority = permutations(range(0, len(ref)))
+        heuristic_scores = []
+        for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
+            stroke_maps = []
+            compare_scores = []
+            strokes, p_strokes = geometry_length
+            # Find candidate stroke orders
+            for priority in stroke_priority:
+                error_maps = strokeErrorMatrix(strokes, ref, p_strokes, p_ref)
+                stroke_map = np.full(len(strokes), -1)
+                for i in priority:
+                    smallerror = np.argmin(error_maps[i]) # retrieve index of smallest error for current archetype stroke
+                    while(stroke_map[smallerror]!=-1):
+                        # change small error so that we do not repeat over indexes that are already taken
+                        # just keeps repeating until we land on an index that doesn't already have a value in its place
+                        error_maps[i][smallerror] = 10000
+                        smallerror = np.argmin(error_maps[i])
+                    stroke_map[smallerror] = i
+                if not any(np.array_equal(stroke_map, m) for m in stroke_maps):
+                    stroke_map = np.array([n for n in stroke_map if n != -1])
+                    stroke_maps.append(stroke_map)
+            # Retrieve scores for each candidate stroke order
+            print(stroke_maps)
+            for s in stroke_maps:
+                heuristic_xml = minXml(ref_char, bases, stroke_set, np.array(s)+1)
+                heuristic_score = getXmlScore(heuristic_xml)
+                compare_scores.append(heuristic_score)
+            heuristic_scores.append(max(compare_scores))
+        return heuristic_scores
+    
+
+    wins1 = 0
+    wins2 = 0
+    scores1, _ = heuristic(algo)
+    scores2 = dynamic(ref_char, ref_data, char_data)
+
+    for (score1, score2) in zip(scores1, scores2):
+        if score1 > score2:
+            wins1 += 1
+        elif score2 > score1:
+            wins2 += 1
+
+    results1 = timeit.timeit("heuristic(algo)", number=trials, globals=locals())
+    results2 = timeit.timeit("dynamic(ref_char, ref_data, char_data)", number=trials, globals=locals())
+    print("The heuristic algorithm took", results1, "seconds to execute", trials, "times.")
+    print("The dynamic algorithm took", results2, "seconds to execute", trials, "times.")
+    print("The heuristic algorithm scored", wins1, "genes more accurately than the dynamic algorithm.")
+    print("The dynamic algorithm scored", wins2, "genes more accurately than the heuristic algorithm.")
+    print("The heuristic algorithm and dynamic algorithm scored", len(scores1)-wins1-wins2, "genes identically.")
+
+
+
+
 ref_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/Reference' # archetype directory
 data_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/NewGenes' # gene directory
 ref_char = "6709"
+
+
 
 ref_data = loadRef(ref_char, ref_dir)
 char_data = loadGeometryBases(data_dir, ref_data[2])
 
 while True:
-    print("1. Exhaustive vs. Heuristic\n2. Heuristic vs. Heuristic")
+    print("1. Exhaustive vs. Heuristic\n2. Dynamic vs. Heuristic\n3. Heuristic vs. Heuristic")
     print("Ctrl+C to exit")
     c = input("Choose an option: ")
     if c == "1":
@@ -145,5 +220,8 @@ while True:
         compareExhaustive(alignStrokes, ref_data, char_data, int(trials))
     elif c == "2":
         trials = input("Amount of trials: ")
-        compareHeuristic(alignStrokes, greedyAlign2, ref_data, char_data, int(trials))
+        compareDynamic(alignStrokes, ref_char, ref_data, char_data, int(trials))
+    elif c == "3":
+        trials = input("Amount of trials: ")
+        #compareHeuristic(alignStrokes, greedyAlign2, ref_data, char_data, int(trials))
     print("")
