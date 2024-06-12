@@ -157,20 +157,50 @@ def compareHeuristic2(algo, ref_char, ref_data, char_data):
     def newHeuristic():
         heuristic_scores = []
         for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
-            compare_scores = []
+            #print(f_name)
             strokes, p_strokes = geometry_length
+            if len(ref_geometry) != len(strokes):
+                continue
             # Test through row/col
             base_matrix = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
+            #print(base_matrix)
             error_maps = np.copy(base_matrix)
+            row_stroke_map = np.full(len(strokes), -1)
             col_stroke_map = np.full(len(strokes), -1)
+            row_mins = np.min(error_maps, axis=1)
             col_mins = np.min(error_maps, axis=0)
+            compare_scores = []
             stroke_maps = {}
+            # Iterate over every smallest error per row
+            for row_min in row_mins:
+                coords = np.argwhere(error_maps == row_min)
+                if len(coords) > 1: # In cases where there are identical error values
+                    for coord in coords:
+                        if not np.any(row_stroke_map == coord[0]):#row_stroke_map[coord[0]-1] != -1:
+                            loc = coord
+                            break
+                else:
+                    loc = coords[0] # Find [row, col] index of current smallest error
+                while row_stroke_map[loc[1]] != -1: # Make sure there's no overlap
+                    error_maps[loc[0]][loc[1]] = 10000
+                    loc[1] = np.argmin(error_maps[loc[0]])
+                    # # remind program to switch the priority and repeat
+                row_stroke_map[loc[1]] = loc[0]
+                #print(row_stroke_map)
+            if np.array2string(row_stroke_map) not in stroke_maps:
+                stroke_maps[np.array2string(row_stroke_map)] = row_stroke_map
+            # example: row 0's smallest error is at index 2 and so stroke_map[2] = 0
+            # but row 4's smallest error is also at index 2
+            # take row 0, recalculate the smallest error excluding index 2,
+            # but it's too difficult so just permutation of all overlaps and rearrange them
+            error_maps = np.copy(base_matrix)
             for col_min in col_mins:
                 coords = np.argwhere(error_maps == col_min)
                 if len(coords) > 1: # In cases where there are identical error values
                     for coord in coords:
                         if col_stroke_map[coord[1]-1] != -1:
                             loc = coord
+                            break
                 else:
                     loc = coords[0] # Find [row, col] index of current smallest error
                 while np.any(col_stroke_map == loc[0]): # Make sure there's no overlap
@@ -180,8 +210,12 @@ def compareHeuristic2(algo, ref_char, ref_data, char_data):
             if np.array2string(col_stroke_map) not in stroke_maps:
                 stroke_maps[np.array2string(col_stroke_map)] = col_stroke_map
             for s in stroke_maps.values():
+                #print(s)
                 heuristic_xml = minXml(ref_char, bases, stroke_set, s+1)
-                heuristic_score = getXmlScore(heuristic_xml)
+                try:
+                    heuristic_score = getXmlScore(heuristic_xml)
+                except:
+                    print("err:", f_name)
                 compare_scores.append(heuristic_score)
             heuristic_scores.append(max(compare_scores))
         return heuristic_scores
@@ -249,8 +283,10 @@ def compareExhaustive2(ref_char, ref_data, char_data):
     def newHeuristic():
         heuristic_scores = []
         for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
-            compare_scores = []
+            #print(f_name)
             strokes, p_strokes = geometry_length
+            if len(ref_geometry) != len(strokes):
+                continue
             # Test through row/col
             base_matrix = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
             #print(base_matrix)
@@ -259,34 +295,37 @@ def compareExhaustive2(ref_char, ref_data, char_data):
             col_stroke_map = np.full(len(strokes), -1)
             row_mins = np.min(error_maps, axis=1)
             col_mins = np.min(error_maps, axis=0)
+            compare_scores = []
             stroke_maps = {}
-            # # Iterate over every smallest error per row
-            # for row_min in row_mins:
-            #     coords = np.argwhere(error_maps == row_min)
-            #     if len(coords) > 1: # In cases where there are identical error values
-            #         for coord in coords:
-            #             if row_stroke_map[coord[0]-1] != -1:
-            #                 loc = coord
-            #     else:
-            #         loc = coords[0] # Find [row, col] index of current smallest error
-            #     while row_stroke_map[loc[1]] != -1: # Make sure there's no overlap
-            #         error_maps[loc[0]][loc[1]] = 10000
-            #         loc[1] = np.argmin(error_maps[loc[0]])
-            #         # # remind program to switch the priority and repeat
-            #     row_stroke_map[loc[1]] = loc[0]
-            # if np.array2string(row_stroke_map) not in stroke_maps:
-            #     stroke_maps[np.array2string(row_stroke_map)] = row_stroke_map
-            # # example: row 0's smallest error is at index 2 and so stroke_map[2] = 0
-            # # but row 4's smallest error is also at index 2
-            # # take row 0, recalculate the smallest error excluding index 2,
-            # # but it's too difficult so just permutation of all overlaps and rearrange them
-            # error_maps = np.copy(base_matrix)
+            # Iterate over every smallest error per row
+            for row_min in row_mins:
+                coords = np.argwhere(error_maps == row_min)
+                if len(coords) > 1: # In cases where there are identical error values
+                    for coord in coords:
+                        if not np.any(row_stroke_map == coord[0]):#row_stroke_map[coord[0]-1] != -1:
+                            loc = coord
+                            break
+                else:
+                    loc = coords[0] # Find [row, col] index of current smallest error
+                while row_stroke_map[loc[1]] != -1: # Make sure there's no overlap
+                    error_maps[loc[0]][loc[1]] = 10000
+                    loc[1] = np.argmin(error_maps[loc[0]])
+                    # # remind program to switch the priority and repeat
+                row_stroke_map[loc[1]] = loc[0]
+            if np.array2string(row_stroke_map) not in stroke_maps:
+                stroke_maps[np.array2string(row_stroke_map)] = row_stroke_map
+            # example: row 0's smallest error is at index 2 and so stroke_map[2] = 0
+            # but row 4's smallest error is also at index 2
+            # take row 0, recalculate the smallest error excluding index 2,
+            # but it's too difficult so just permutation of all overlaps and rearrange them
+            error_maps = np.copy(base_matrix)
             for col_min in col_mins:
                 coords = np.argwhere(error_maps == col_min)
                 if len(coords) > 1: # In cases where there are identical error values
                     for coord in coords:
                         if col_stroke_map[coord[1]-1] != -1:
                             loc = coord
+                            break
                 else:
                     loc = coords[0] # Find [row, col] index of current smallest error
                 while np.any(col_stroke_map == loc[0]): # Make sure there's no overlap
@@ -298,7 +337,10 @@ def compareExhaustive2(ref_char, ref_data, char_data):
             for s in stroke_maps.values():
                 #print(s)
                 heuristic_xml = minXml(ref_char, bases, stroke_set, s+1)
-                heuristic_score = getXmlScore(heuristic_xml)
+                try:
+                    heuristic_score = getXmlScore(heuristic_xml)
+                except:
+                    print("err:", f_name)
                 compare_scores.append(heuristic_score)
             heuristic_scores.append(max(compare_scores))
         return heuristic_scores
