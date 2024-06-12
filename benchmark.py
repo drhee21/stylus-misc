@@ -1,10 +1,9 @@
 from itertools import permutations
 from math import factorial
+from time import time
 from pathlib import Path
 
 import os
-import time
-import timeit
 
 import numpy as np
 
@@ -42,7 +41,7 @@ def computeExhaustive(ref_char, f_read, data_dir, exhaust_dir = "Exhaustive", pr
 """
 Function to compare two heuristic algorithms' accuracy and performance.
 """
-def compareHeuristic(algo1, algo2, ref_data, char_data, trials):
+def compareHeuristic(algo1, algo2, ref_data, char_data):
     ref_geometry, ref_progress_percentage, output_size = ref_data
     g_data, _, base_data, stroke_sets, _, f_names = char_data
     
@@ -61,8 +60,14 @@ def compareHeuristic(algo1, algo2, ref_data, char_data, trials):
 
     wins1 = 0
     wins2 = 0
+    print("Running first algorithm...")
+    init1 = time()
     scores1, align1 = benchmark(algo1)
+    results1 = time()-init1
+    print("Running second algorithm...")
+    init2 = time()
     scores2, align2 = benchmark(algo2)
+    results2 = time()-init2
 
     for (score1, score2) in zip(scores1, scores2):
         if score1 > score2:
@@ -70,12 +75,8 @@ def compareHeuristic(algo1, algo2, ref_data, char_data, trials):
         elif score2 > score1:
             wins2 += 1
 
-    print("Running first algorithm...")
-    results1 = timeit.timeit("benchmark(algo1)", number=trials, globals=locals())
-    print("Running second algorithm...")
-    results2 = timeit.timeit("benchmark(algo2)", number=trials, globals=locals())
-    print("The first algorithm took", results1, "seconds to execute", trials, "times.")
-    print("The second algorithm took", results2, "seconds to execute", trials, "times.")
+    print("The first algorithm took", results1, "seconds to execute.")
+    print("The second algorithm took", results2, "seconds to execute.")
     print("The first algorithm scored", wins1, "genes more accurately than the second algorithm.")
     print("The second algorithm scored", wins2, "genes more accurately than the first algorithm.")
     print("The first and second algorithm scored", len(scores1)-wins1-wins2, "genes identically.")
@@ -83,7 +84,7 @@ def compareHeuristic(algo1, algo2, ref_data, char_data, trials):
 """
 Function to compare a heuristic algorithm's accuracy and performance against the exhaustive search.
 """
-def compareExhaustive(algo, ref_data, char_data, trials):
+def compareExhaustive(algo, ref_data, char_data):
     ref_geometry, ref_progress_percentage, output_size = ref_data
     g_data, han_chars, base_data, stroke_sets, _, f_names = char_data
     
@@ -113,27 +114,29 @@ def compareExhaustive(algo, ref_data, char_data, trials):
 
     wins1 = 0
     wins2 = 0
+    print("Running greedy algorithm...")
+    init1 = time()
     scores1, _ = heuristic(algo)
+    results1 = time()-init1
+    print("Running exhaustive search...")
+    init2 = time()
     scores2 = exhaustive()
+    results2 = time()-init2
 
     for (score1, score2) in zip(scores1, scores2):
         if score1 > score2:
             wins1 += 1
         elif score2 > score1:
             wins2 += 1
-
-    print("Running greedy algorithm...")
-    results1 = timeit.timeit("heuristic(algo)", number=trials, globals=locals())
-    print("Running exhaustive search...")
-    results2 = timeit.timeit("exhaustive()", number=trials, globals=locals())
-    print("The greedy algorithm took", results1, "seconds to execute", trials, "times.")
-    print("The exhaustive search took", results2, "seconds to execute", trials, "times.")
+            
+    print("The greedy algorithm took", results1, "seconds to execute.")
+    print("The exhaustive search took", results2, "seconds to execute.")
     print("The greedy algorithm scored", wins1, "genes more accurately than the exhaustive search.")
     print("The exhaustive search scored", wins2, "genes more accurately than the greedy algorithm.")
     print("The greedy algorithm and exhaustive search scored", len(scores1)-wins1-wins2, "genes identically.")
 
 
-def compareHeuristic2(algo, ref_char, ref_data, char_data, trials):
+def compareHeuristic2(algo, ref_char, ref_data, char_data):
     ref_geometry, ref_progress_percentage, output_size = ref_data
     g_data, han_chars, base_data, stroke_sets, _, f_names = char_data
     
@@ -216,8 +219,14 @@ def compareHeuristic2(algo, ref_char, ref_data, char_data, trials):
 
     wins1 = 0
     wins2 = 0
+    print("Running greedy algorithm...")
+    init1 = time()
     scores1, _ = heuristic(algo)
+    results1 = time()-init1
+    print("Running heuristic algorithm...")
+    init2 = time()
     scores2 = newHeuristic()#dynamic()
+    results2 = time()-init2
 
     for (score1, score2) in zip(scores1, scores2):
         if score1 > score2:
@@ -225,18 +234,14 @@ def compareHeuristic2(algo, ref_char, ref_data, char_data, trials):
         elif score2 > score1:
             wins2 += 1
 
-    print("Running greedy algorithm...")
-    results1 = timeit.timeit("heuristic(algo)", number=trials, globals=locals())
-    print("Running heuristic algorithm...")
-    results2 = timeit.timeit("newHeuristic()", number=trials, globals=locals())
-    print("The greedy algorithm took", results1, "seconds to execute", trials, "times.")
-    print("The heuristic algorithm took", results2, "seconds to execute", trials, "times.")
+    print("The greedy algorithm took", results1, "seconds to execute.")
+    print("The heuristic algorithm took", results2, "seconds to execute.")
     print("The greedy algorithm scored", wins1, "genes more accurately than the heuristic algorithm.")
     print("The heuristic algorithm scored", wins2, "genes more accurately than the greedy algorithm.")
     print("The greedy algorithm and heuristic algorithm scored", len(scores1)-wins1-wins2, "genes identically.")
 
 
-def compareExhaustive2(ref_char, ref_data, char_data, trials):
+def compareExhaustive2(ref_char, ref_data, char_data):
     ref_geometry, ref_progress_percentage, output_size = ref_data
     g_data, han_chars, base_data, stroke_sets, _, f_names = char_data
     
@@ -341,8 +346,14 @@ def compareExhaustive2(ref_char, ref_data, char_data, trials):
 
     wins1 = 0
     wins2 = 0
+    print("Running heuristic algorithm...")
+    init1 = time()
     scores1 = newHeuristic()#dynamic()
+    results1 = time()-init1
+    print("Running exhaustive search...")
+    init2 = time()
     scores2 = exhaustive()
+    results2 = time()-init2
 
     for (score1, score2) in zip(scores1, scores2):
         if score1 > score2:
@@ -350,12 +361,8 @@ def compareExhaustive2(ref_char, ref_data, char_data, trials):
         elif score2 > score1:
             wins2 += 1
 
-    print("Running heuristic algorithm...")
-    results1 = timeit.timeit("newHeuristic()", number=trials, globals=locals())
-    print("Running exhaustive search...")
-    results2 = timeit.timeit("exhaustive()", number=trials, globals=locals())
-    print("The heuristic algorithm took", results1, "seconds to execute", trials, "times.")
-    print("The exhaustive search took", results2, "seconds to execute", trials, "times.")
+    print("The heuristic algorithm took", results1, "seconds to execute.")
+    print("The exhaustive search took", results2, "seconds to execute.")
     print("The heuristic algorithm scored", wins1, "genes more accurately than the exhaustive search.")
     print("The exhaustive search scored", wins2, "genes more accurately than the heuristic algorithm.")
     print("The heuristic algorithm and exhaustive search scored", len(scores1)-wins1-wins2, "genes identically.")
@@ -375,15 +382,12 @@ while True:
     print("Ctrl+C to exit")
     c = input("Choose an option: ")
     if c == "1":
-        trials = input("Amount of trials: ")
-        compareExhaustive(alignStrokes, ref_data, char_data, int(trials))
+        compareExhaustive(alignStrokes, ref_data, char_data)
     elif c == "2":
-        trials = input("Amount of trials: ")
-        compareExhaustive2(ref_char, ref_data, char_data, int(trials))
+        compareExhaustive2(ref_char, ref_data, char_data)
     elif c == "3":
-        trials = input("Amount of trials: ")
-        compareHeuristic2(alignStrokes, ref_char, ref_data, char_data, int(trials))
+        compareHeuristic2(alignStrokes, ref_char, ref_data, char_data)
     elif c == "4":
-        trials = input("Amount of trials: ")
+        pass
         #compareHeuristic(alignStrokes, greedyAlign2, ref_data, char_data, int(trials))
     print("")
