@@ -12,6 +12,7 @@ from score_strokes import alignStrokes, greedyAlign2, strokeErrorMatrix
 from xmlparse import extractBases, loadGeometryBases, loadRef, getXmlScore, minXml
 
 ## I can't stop Jupyter Notebook from printing out the genome fitness for every single trial so it's better to put the code in a Python script.
+## Simple benchmark test for gene scoring algorithms comparing six stroke genes.
 
 # Edited from exhaustive.py
 def computeExhaustive(ref_char, f_read, data_dir, exhaust_dir = "Exhaustive", prog_interval = 100, save = True, xml_dir = "GenXml/Exhaustive", save_file = ""):
@@ -150,42 +151,86 @@ def compareDynamic(algo, ref_char, ref_data, char_data, trials):
         return heuristic_scores, heuristic_alignments
 
     
-    
-    def dynamic():
+    def dynamic3():
         heuristic_scores = []
         for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
-            stroke_priority = permutations(range(0, len(ref_geometry)))
-            stroke_maps = []
             compare_scores = []
             strokes, p_strokes = geometry_length
-            # Find candidate stroke orders
-            for priority in stroke_priority:
-                error_maps = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
-                stroke_map = np.full(len(strokes), -1)
-                for i in priority:
-                    smallerror = np.argmin(error_maps[i]) # retrieve index of smallest error for current archetype stroke
-                    while(stroke_map[smallerror]!=-1):
-                        # change small error so that we do not repeat over indexes that are already taken
-                        # just keeps repeating until we land on an index that doesn't already have a value in its place
-                        error_maps[i][smallerror] = 10000
-                        smallerror = np.argmin(error_maps[i])
-                    stroke_map[smallerror] = i
-                if not any(np.array_equal(stroke_map, m) for m in stroke_maps):
-                    stroke_map = np.array([n for n in stroke_map if n != -1])
-                    stroke_maps.append(stroke_map)
-            # Retrieve scores for each candidate stroke order
-            for s in stroke_maps:
-                heuristic_xml = minXml(ref_char, bases, stroke_set, np.array(s)+1)
+            # Test through row/col
+            base_matrix = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
+            error_maps = np.copy(base_matrix)
+            row_stroke_map = np.full(len(strokes), -1)
+            col_stroke_map = np.full(len(strokes), -1)
+            row_mins = np.min(error_maps, axis=1)
+            col_mins = np.min(error_maps, axis=0)
+            stroke_maps = {}
+            # Iterate over every smallest error per row
+            for row_min in row_mins:
+                loc = np.argwhere(error_maps == row_min)[0] # Find [row, col] index of current smallest error
+                while row_stroke_map[loc[1]] != -1: # Make sure there's no overlap
+                    error_maps[loc[0]][loc[1]] = 10000
+                    loc[1] = np.argmin(error_maps[loc[0]])
+                    # # remind program to switch the priority and repeat
+                row_stroke_map[loc[1]] = loc[0]
+            if np.array2string(row_stroke_map) not in stroke_maps:
+                stroke_maps[np.array2string(row_stroke_map)] = row_stroke_map
+            # example: row 0's smallest error is at index 2 and so stroke_map[2] = 0
+            # but row 4's smallest error is also at index 2
+            # take row 0, recalculate the smallest error excluding index 2,
+            # but it's too difficult so just permutation of all overlaps and rearrange them
+            error_maps = np.copy(base_matrix)
+            for col_min in col_mins:
+                loc = np.argwhere(error_maps == col_min)[0] # Find [row, col] index of current smallest error
+                while col_stroke_map[loc[1]] != -1: # Make sure there's no overlap
+                    overlaps[loc[1]] = col_stroke_map[loc[1]]
+                    error_maps[loc[0]][loc[1]] = 10000
+                    loc[1] = np.argmin(error_maps[loc[0]])
+                col_stroke_map[loc[1]] = loc[0]
+            if np.array2string(col_stroke_map) not in stroke_maps:
+                stroke_maps[np.array2string(col_stroke_map)] = col_stroke_map
+            #print(len(stroke_maps))
+            for s in stroke_maps.values():
+                heuristic_xml = minXml(ref_char, bases, stroke_set, s+1)
                 heuristic_score = getXmlScore(heuristic_xml)
                 compare_scores.append(heuristic_score)
             heuristic_scores.append(max(compare_scores))
         return heuristic_scores
     
+    # def dynamic():
+    #     heuristic_scores = []
+    #     for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
+    #         stroke_priority = permutations(range(0, len(ref_geometry)))
+    #         stroke_maps = []
+    #         compare_scores = []
+    #         strokes, p_strokes = geometry_length
+    #         # Find candidate stroke orders
+    #         for priority in stroke_priority:
+    #             error_maps = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
+    #             stroke_map = np.full(len(strokes), -1)
+    #             for i in priority:
+    #                 smallerror = np.argmin(error_maps[i]) # retrieve index of smallest error for current archetype stroke
+    #                 while(stroke_map[smallerror]!=-1):
+    #                     # change small error so that we do not repeat over indexes that are already taken
+    #                     # just keeps repeating until we land on an index that doesn't already have a value in its place
+    #                     error_maps[i][smallerror] = 10000
+    #                     smallerror = np.argmin(error_maps[i])
+    #                 stroke_map[smallerror] = i
+    #             if not any(np.array_equal(stroke_map, m) for m in stroke_maps):
+    #                 stroke_map = np.array([n for n in stroke_map if n != -1])
+    #                 stroke_maps.append(stroke_map)
+    #         # Retrieve scores for each candidate stroke order
+    #         for s in stroke_maps:
+    #             heuristic_xml = minXml(ref_char, bases, stroke_set, np.array(s)+1)
+    #             heuristic_score = getXmlScore(heuristic_xml)
+    #             compare_scores.append(heuristic_score)
+    #         heuristic_scores.append(max(compare_scores))
+    #     return heuristic_scores
+    
 
     wins1 = 0
     wins2 = 0
     scores1, _ = heuristic(algo)
-    scores2 = dynamic()
+    scores2 = dynamic3()#dynamic()
 
     for (score1, score2) in zip(scores1, scores2):
         if score1 > score2:
@@ -196,7 +241,7 @@ def compareDynamic(algo, ref_char, ref_data, char_data, trials):
     print("Running greedy algorithm...")
     results1 = timeit.timeit("heuristic(algo)", number=trials, globals=locals())
     print("Running dynamic algorithm...")
-    results2 = timeit.timeit("dynamic()", number=trials, globals=locals())
+    results2 = timeit.timeit("dynamic3()", number=trials, globals=locals())
     print("The greedy algorithm took", results1, "seconds to execute", trials, "times.")
     print("The dynamic algorithm took", results2, "seconds to execute", trials, "times.")
     print("The greedy algorithm scored", wins1, "genes more accurately than the dynamic algorithm.")
@@ -209,35 +254,79 @@ def compareDynamicExhaustive(ref_char, ref_data, char_data, trials):
     g_data, han_chars, base_data, stroke_sets, _, f_names = char_data
     
     
-    def dynamic():
+    def dynamic3():
         heuristic_scores = []
         for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
-            stroke_priority = permutations(range(0, len(ref_geometry)))
-            stroke_maps = []
             compare_scores = []
             strokes, p_strokes = geometry_length
-            # Find candidate stroke orders
-            for priority in stroke_priority:
-                error_maps = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
-                stroke_map = np.full(len(strokes), -1)
-                for i in priority:
-                    smallerror = np.argmin(error_maps[i]) # retrieve index of smallest error for current archetype stroke
-                    while(stroke_map[smallerror]!=-1):
-                        # change small error so that we do not repeat over indexes that are already taken
-                        # just keeps repeating until we land on an index that doesn't already have a value in its place
-                        error_maps[i][smallerror] = 10000
-                        smallerror = np.argmin(error_maps[i])
-                    stroke_map[smallerror] = i
-                if not any(np.array_equal(stroke_map, m) for m in stroke_maps):
-                    stroke_map = np.array([n for n in stroke_map if n != -1])
-                    stroke_maps.append(stroke_map)
-            # Retrieve scores for each candidate stroke order
-            for s in stroke_maps:
-                heuristic_xml = minXml(ref_char, bases, stroke_set, np.array(s)+1)
+            # Test through row/col
+            base_matrix = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
+            error_maps = np.copy(base_matrix)
+            row_stroke_map = np.full(len(strokes), -1)
+            col_stroke_map = np.full(len(strokes), -1)
+            row_mins = np.min(error_maps, axis=1)
+            col_mins = np.min(error_maps, axis=0)
+            stroke_maps = {}
+            # Iterate over every smallest error per row
+            for row_min in row_mins:
+                loc = np.argwhere(error_maps == row_min)[0] # Find [row, col] index of current smallest error
+                while row_stroke_map[loc[1]] != -1: # Make sure there's no overlap
+                    error_maps[loc[0]][loc[1]] = 10000
+                    loc[1] = np.argmin(error_maps[loc[0]])
+                    # # remind program to switch the priority and repeat
+                row_stroke_map[loc[1]] = loc[0]
+            if np.array2string(row_stroke_map) not in stroke_maps:
+                stroke_maps[np.array2string(row_stroke_map)] = row_stroke_map
+            # example: row 0's smallest error is at index 2 and so stroke_map[2] = 0
+            # but row 4's smallest error is also at index 2
+            # take row 0, recalculate the smallest error excluding index 2,
+            # but it's too difficult so just permutation of all overlaps and rearrange them
+            error_maps = np.copy(base_matrix)
+            for col_min in col_mins:
+                loc = np.argwhere(error_maps == col_min)[0] # Find [row, col] index of current smallest error
+                while col_stroke_map[loc[1]] != -1: # Make sure there's no overlap
+                    overlaps[loc[1]] = col_stroke_map[loc[1]]
+                    error_maps[loc[0]][loc[1]] = 10000
+                    loc[1] = np.argmin(error_maps[loc[0]])
+                col_stroke_map[loc[1]] = loc[0]
+            if np.array2string(col_stroke_map) not in stroke_maps:
+                stroke_maps[np.array2string(col_stroke_map)] = col_stroke_map
+            for s in stroke_maps.values():
+                heuristic_xml = minXml(ref_char, bases, stroke_set, s+1)
                 heuristic_score = getXmlScore(heuristic_xml)
                 compare_scores.append(heuristic_score)
             heuristic_scores.append(max(compare_scores))
         return heuristic_scores
+    
+    # def dynamic():
+    #     heuristic_scores = []
+    #     for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
+    #         stroke_priority = permutations(range(0, len(ref_geometry)))
+    #         stroke_maps = []
+    #         compare_scores = []
+    #         strokes, p_strokes = geometry_length
+    #         # Find candidate stroke orders
+    #         for priority in stroke_priority:
+    #             error_maps = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
+    #             stroke_map = np.full(len(strokes), -1)
+    #             for i in priority:
+    #                 smallerror = np.argmin(error_maps[i]) # retrieve index of smallest error for current archetype stroke
+    #                 while(stroke_map[smallerror]!=-1):
+    #                     # change small error so that we do not repeat over indexes that are already taken
+    #                     # just keeps repeating until we land on an index that doesn't already have a value in its place
+    #                     error_maps[i][smallerror] = 10000
+    #                     smallerror = np.argmin(error_maps[i])
+    #                 stroke_map[smallerror] = i
+    #             if not any(np.array_equal(stroke_map, m) for m in stroke_maps):
+    #                 stroke_map = np.array([n for n in stroke_map if n != -1])
+    #                 stroke_maps.append(stroke_map)
+    #         # Retrieve scores for each candidate stroke order
+    #         for s in stroke_maps:
+    #             heuristic_xml = minXml(ref_char, bases, stroke_set, np.array(s)+1)
+    #             heuristic_score = getXmlScore(heuristic_xml)
+    #             compare_scores.append(heuristic_score)
+    #         heuristic_scores.append(max(compare_scores))
+    #     return heuristic_scores
 
     def exhaustive():
         exhaustive_scores = []
@@ -252,7 +341,7 @@ def compareDynamicExhaustive(ref_char, ref_data, char_data, trials):
 
     wins1 = 0
     wins2 = 0
-    scores1 = dynamic()
+    scores1 = dynamic3()#dynamic()
     scores2 = exhaustive()
 
     for (score1, score2) in zip(scores1, scores2):
@@ -262,7 +351,7 @@ def compareDynamicExhaustive(ref_char, ref_data, char_data, trials):
             wins2 += 1
 
     print("Running dynamic algorithm...")
-    results1 = timeit.timeit("dynamic()", number=trials, globals=locals())
+    results1 = timeit.timeit("dynamic3()", number=trials, globals=locals())
     print("Running exhaustive search...")
     results2 = timeit.timeit("exhaustive()", number=trials, globals=locals())
     print("The dynamic algorithm took", results1, "seconds to execute", trials, "times.")
