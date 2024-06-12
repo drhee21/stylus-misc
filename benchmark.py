@@ -412,7 +412,6 @@ def compareExhaustive2(ref_char, ref_data, char_data):
 
 ref_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/Reference' # archetype directory
 data_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/NewGenes' # gene directory
-ref_char = "5B89"
 
 
 
