@@ -412,7 +412,7 @@ def compareExhaustive2(ref_char, ref_data, char_data):
 
 ref_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/Reference' # archetype directory
 data_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/NewGenes' # gene directory
-ref_char = "6709"
+ref_char = "5B89"
 
 
 
@@ -422,6 +422,10 @@ char_data = loadGeometryBases(data_dir, ref_data[2])
 while True:
     print("1. Exhaustive vs. Greedy\n2. Exhaustive vs. Heuristic\n3. Greedy vs. Heuristic\n4. Heuristic vs. Heuristic")
     print("Ctrl+C to exit")
+    ref_char = input("Enter a reference character (example: 4EFB): ")
+    print("Loading data...")
+    ref_data = loadRef(ref_char, ref_dir)
+    char_data = loadGeometryBases(data_dir, ref_data[2])
     c = input("Choose an option: ")
     if c == "1":
         compareExhaustive(alignStrokes, ref_data, char_data)
