@@ -204,7 +204,7 @@ def run_benchmarks(funcs, trials):
         print(f"Finished {f.__name__} benchmarks!")
     return benchmarks
 
-def format_benchmarks(funcs, benchmarks, wins):
+def format_benchmarks(funcs, benchmarks, wins, trials):
     print("")
     names = []
     for f in funcs:
@@ -212,7 +212,7 @@ def format_benchmarks(funcs, benchmarks, wins):
     count = len(max(names, key=len))
     print("===SPEED BENCHMARKS===")
     for (n, b) in zip(names, benchmarks):
-        print("{:>{}}:\t{} s".format(n, count, b[0]))
+        print("{:>{}}:\t{} s".format(n, count, b[0]/trials))
     print("")
     print("===ACCURACY RESULTS===") # accuracy is measured by whether the algorithm's score for a gene matches the highest score computed among all algorithms being tested
     for (f, w) in zip(funcs, wins):
@@ -255,7 +255,7 @@ while True:
                 heuristic_wins += 1
             if best_score == heuristic_fallback_score:
                 heuristic_fallback_wins += 1
-        format_benchmarks([greedy, heuristic, heuristic_fallback], benchmarks, [greedy_wins, heuristic_wins, heuristic_fallback_wins])
+        format_benchmarks([greedy, heuristic, heuristic_fallback], benchmarks, [greedy_wins, heuristic_wins, heuristic_fallback_wins], trials)
     else:
         exhaustive_wins = 0
         benchmarks = run_benchmarks([exhaustive, greedy, heuristic, heuristic_fallback], trials)
@@ -269,5 +269,5 @@ while True:
                 heuristic_wins += 1
             if best_score == heuristic_fallback_score:
                 heuristic_fallback_wins += 1
-        format_benchmarks([exhaustive, greedy, heuristic, heuristic_fallback], benchmarks, [exhaustive_wins, greedy_wins, heuristic_wins, heuristic_fallback_wins])
+        format_benchmarks([exhaustive, greedy, heuristic, heuristic_fallback], benchmarks, [exhaustive_wins, greedy_wins, heuristic_wins, heuristic_fallback_wins], trials)
     print("")
