@@ -204,7 +204,7 @@ def run_benchmarks(funcs, trials):
         print(f"Finished {f.__name__} benchmarks!")
     return benchmarks
 
-def format_benchmarks(funcs, benchmarks, wins, trials):
+def format_benchmarks(funcs, benchmarks, wins, total, trials):
     print("")
     names = []
     for f in funcs:
@@ -216,7 +216,7 @@ def format_benchmarks(funcs, benchmarks, wins, trials):
     print("")
     print("===ACCURACY RESULTS===") # accuracy is measured by whether the algorithm's score for a gene matches the highest score computed among all algorithms being tested
     for (f, w) in zip(funcs, wins):
-        print(f"{f.__name__} scored {w} genes accurately.")
+        print(f"{f.__name__} scored {w} out of {total} genes accurately.")
 
 ref_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/Reference' # archetype directory
 data_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/NewGenes' # gene directory
@@ -255,7 +255,7 @@ while True:
                 heuristic_wins += 1
             if best_score == heuristic_fallback_score:
                 heuristic_fallback_wins += 1
-        format_benchmarks([greedy, heuristic, heuristic_fallback], benchmarks, [greedy_wins, heuristic_wins, heuristic_fallback_wins], int(trials))
+        format_benchmarks([greedy, heuristic, heuristic_fallback], benchmarks, [greedy_wins, heuristic_wins, heuristic_fallback_wins], len(char_data[0]), int(trials))
     else:
         exhaustive_wins = 0
         benchmarks = run_benchmarks([exhaustive, greedy, heuristic, heuristic_fallback], trials)
@@ -269,5 +269,5 @@ while True:
                 heuristic_wins += 1
             if best_score == heuristic_fallback_score:
                 heuristic_fallback_wins += 1
-        format_benchmarks([exhaustive, greedy, heuristic, heuristic_fallback], benchmarks, [exhaustive_wins, greedy_wins, heuristic_wins, heuristic_fallback_wins], int(trials))
+        format_benchmarks([exhaustive, greedy, heuristic, heuristic_fallback], benchmarks, [exhaustive_wins, greedy_wins, heuristic_wins, heuristic_fallback_wins], len(char_data[0]), int(trials))
     print("")
