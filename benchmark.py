@@ -255,7 +255,7 @@ while True:
                 heuristic_wins += 1
             if best_score == heuristic_fallback_score:
                 heuristic_fallback_wins += 1
-        format_benchmarks([greedy, heuristic, heuristic_fallback], benchmarks, [greedy_wins, heuristic_wins, heuristic_fallback_wins], trials)
+        format_benchmarks([greedy, heuristic, heuristic_fallback], benchmarks, [greedy_wins, heuristic_wins, heuristic_fallback_wins], int(trials))
     else:
         exhaustive_wins = 0
         benchmarks = run_benchmarks([exhaustive, greedy, heuristic, heuristic_fallback], trials)
@@ -269,5 +269,5 @@ while True:
                 heuristic_wins += 1
             if best_score == heuristic_fallback_score:
                 heuristic_fallback_wins += 1
-        format_benchmarks([exhaustive, greedy, heuristic, heuristic_fallback], benchmarks, [exhaustive_wins, greedy_wins, heuristic_wins, heuristic_fallback_wins], trials)
+        format_benchmarks([exhaustive, greedy, heuristic, heuristic_fallback], benchmarks, [exhaustive_wins, greedy_wins, heuristic_wins, heuristic_fallback_wins], int(trials))
     print("")
