@@ -11,10 +11,7 @@ from score_strokes import alignStrokes, greedyAlign2, strokeErrorMatrix
 from xmlparse import extractBases, loadGeometryBases, loadRef, getXmlScore, minXml
 
 ## I can't stop Jupyter Notebook from printing out the genome fitness for every single trial so it's better to put the code in a Python script.
-## Simple benchmark test for gene scoring algorithms comparing six stroke genes.
-
-
-
+## Simple benchmark test for gene scoring algorithms.
 
 def exhaustive():
     ref_geometry, ref_progress_percentage, output_size = ref_data
@@ -199,7 +196,27 @@ def heuristic_fallback():
         heuristic_scores.append(max(compare_scores))
     return heuristic_scores
 
-#def format_benchmarks():
+def run_benchmarks(funcs, trials):
+    benchmarks = []
+    for f in funcs:
+        print(f"Running {f.__name__} benchmarks...")
+        benchmarks.append(timeit.Timer(f, globals=locals()).timeit(number=int(trials)))
+        print(f"Finished {f.__name__} benchmarks!")
+    return benchmarks
+
+def format_benchmarks(funcs, benchmarks, wins):
+    print("")
+    names = []
+    for f in funcs:
+        names.append("test_"+f.__name__)
+    count = len(max(names, key=len))
+    print("===SPEED BENCHMARKS===")
+    for (n, b) in zip(names, benchmarks):
+        print("{:>{}}:\t{} s".format(n, count, b[0]))
+    print("")
+    print("===ACCURACY RESULTS===") # accuracy is measured by whether the algorithm's score for a gene matches the highest score computed among all algorithms being tested
+    for (f, w) in zip(funcs, wins):
+        print(f"{f.__name__} scored {w} genes accurately.")
 
 ref_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/Reference' # archetype directory
 data_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/NewGenes' # gene directory
@@ -214,7 +231,9 @@ def inner(_it, _timer{init}):
     return _t1-_t0, scores
 """
 
-
+# currently non-working ref/gene pairings:
+# completely broken: 5B57
+# 4EFB/5408.2.15.gene, 6709/5408.2.3.gene, 6210/5408.2.15.gene, 5411/5408.2.3.gene
 while True:
     print("Ctrl+C to exit")
     ref_char = input("Enter a reference character (example: 4EFB): ")
@@ -222,35 +241,33 @@ while True:
     ref_data = loadRef(ref_char, ref_dir)
     char_data = loadGeometryBases(data_dir, ref_data[2])
     trials = input("Enter number of trials: ")
-    print("Running exhaustive benchmarks...")
-    exhaustive_benchmark = timeit.Timer(exhaustive, globals=locals()).timeit(number=int(trials))
-    print("Finished exhaustive benchmarks!")
-    print("Running greedy benchmarks...")
-    greedy_benchmark = timeit.Timer(greedy, globals=locals()).timeit(number=int(trials))
-    print("Finished greedy benchmarks!")
-    print("Running heuristic benchmarks...")
-    heuristic_benchmark = timeit.Timer(heuristic, globals=locals()).timeit(number=int(trials))
-    print("Finished heuristic benchmarks!")
-    print("Running heuristic_fallback benchmarks...")
-    heuristic_fallback_benchmark = timeit.Timer(heuristic_fallback, globals=locals()).timeit(number=int(trials))
-    print("Finished heuristic_fallback benchmarks!")
-    #print("{:>20}:\t{:0.5f}".format(name, mean(timings)))
-    exhaustive_wins = 0
     greedy_wins = 0
     heuristic_wins = 0
     heuristic_fallback_wins = 0
-    for (exhaustive_score, greedy_score, heuristic_score, heuristic_fallback_score) in zip(exhaustive_benchmark[1], greedy_benchmark[1], heuristic_benchmark[1], heuristic_fallback_benchmark[1]):
-        best_score = max(exhaustive_score, greedy_score, heuristic_score, heuristic_fallback_score)
-        if best_score == exhaustive_score:
-            exhaustive_wins += 1
-        if best_score == greedy_score:
-            greedy_wins += 1
-        if best_score == heuristic_score:
-            heuristic_wins += 1
-        if best_score == heuristic_fallback_score:
-            heuristic_fallback_wins += 1
-    print(f"Exhaustive ({exhaustive_wins}/{len(char_data[0])}): {exhaustive_benchmark[0]}s")
-    print(f"Greedy ({greedy_wins}/{len(char_data[0])}): {greedy_benchmark[0]}s")
-    print(f"Heuristic ({heuristic_wins}/{len(char_data[0])}): {heuristic_benchmark[0]}s")
-    print(f"Heuristic Fallback ({heuristic_fallback_wins}/{len(char_data[0])}): {heuristic_fallback_benchmark[0]}s")
+    excl_exhaustive = input("Exclude exhaustive (T/F)? ")
+    if excl_exhaustive.lower() == "t":
+        benchmarks = run_benchmarks([greedy, heuristic, heuristic_fallback], trials)
+        for (greedy_score, heuristic_score, heuristic_fallback_score) in zip(benchmarks[0][1], benchmarks[1][1], benchmarks[2][1]):
+            best_score = max(greedy_score, heuristic_score, heuristic_fallback_score)
+            if best_score == greedy_score:
+                greedy_wins += 1
+            if best_score == heuristic_score:
+                heuristic_wins += 1
+            if best_score == heuristic_fallback_score:
+                heuristic_fallback_wins += 1
+        format_benchmarks([greedy, heuristic, heuristic_fallback], benchmarks, [greedy_wins, heuristic_wins, heuristic_fallback_wins])
+    else:
+        exhaustive_wins = 0
+        benchmarks = run_benchmarks([exhaustive, greedy, heuristic, heuristic_fallback], trials)
+        for (exhaustive_score, greedy_score, heuristic_score, heuristic_fallback_score) in zip(benchmarks[0][1], benchmarks[1][1], benchmarks[2][1], benchmarks[3][1]):
+            best_score = max(exhaustive_score, greedy_score, heuristic_score, heuristic_fallback_score)
+            if best_score == exhaustive_score:
+                exhaustive_wins += 1
+            if best_score == greedy_score:
+                greedy_wins += 1
+            if best_score == heuristic_score:
+                heuristic_wins += 1
+            if best_score == heuristic_fallback_score:
+                heuristic_fallback_wins += 1
+        format_benchmarks([exhaustive, greedy, heuristic, heuristic_fallback], benchmarks, [exhaustive_wins, greedy_wins, heuristic_wins, heuristic_fallback_wins])
     print("")
