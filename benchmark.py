@@ -67,9 +67,9 @@ def heuristic():
         #print(f_name)
         strokes, p_strokes = geometry_length
         base_matrix = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
-        if len(ref_geometry) != len(strokes):
-            print("skip", f_name)
-            continue
+        #if len(ref_geometry) != len(strokes):
+        #    print("skip", f_name)
+        #    continue
         # Test through row/col
         #print(base_matrix)
         error_maps = np.copy(base_matrix)
@@ -80,8 +80,8 @@ def heuristic():
         compare_scores = []
         stroke_maps = {}
         # Iterate over every smallest error per row
-        for row_min in row_mins:
-            coords = np.argwhere(error_maps == row_min)
+        for row_min in range(len(ref_geometry)):
+            coords = np.argwhere(error_maps == row_mins[row_min])
             if len(coords) > 1: # In cases where there are identical error values
                 for coord in coords:
                     if not np.any(row_stroke_map == coord[0]):#row_stroke_map[coord[0]-1] != -1:
@@ -102,8 +102,8 @@ def heuristic():
         # take row 0, recalculate the smallest error excluding index 2,
         # but it's too difficult so just permutation of all overlaps and rearrange them
         error_maps = np.copy(base_matrix)
-        for col_min in col_mins:
-            coords = np.argwhere(error_maps == col_min)
+        for col_min in range(len(ref_geometry)):
+            coords = np.argwhere(error_maps == col_mins[col_min])
             if len(coords) > 1: # In cases where there are identical error values
                 for coord in coords:
                     if col_stroke_map[coord[1]-1] != -1:
@@ -119,7 +119,8 @@ def heuristic():
             stroke_maps[np.array2string(col_stroke_map)] = col_stroke_map
         for s in stroke_maps.values():
             #print(s)
-            heuristic_xml = minXml(ref_char, bases, stroke_set, s+1)
+            heuristic_alignment = np.delete(s, np.where(s == -1))+1
+            heuristic_xml = minXml(ref_char, bases, stroke_set, heuristic_alignment)
             try:
                 heuristic_score = getXmlScore(heuristic_xml)
             except:
@@ -136,9 +137,9 @@ def heuristic_fallback():
     for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
         #print(f_name)
         strokes, p_strokes = geometry_length
-        if len(ref_geometry) != len(strokes):
-            print("skip:", f_name)
-            continue
+        #if len(ref_geometry) != len(strokes):
+        #    print("skip:", f_name)
+        #    continue
         # Test through row/col
         base_matrix = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
         #print(base_matrix)
@@ -150,8 +151,8 @@ def heuristic_fallback():
         compare_scores = []
         stroke_maps = {}
         # Iterate over every smallest error per row
-        for row_min in row_mins:
-            coords = np.argwhere(error_maps == row_min)
+        for row_min in range(len(ref_geometry)):
+            coords = np.argwhere(error_maps == row_mins[row_min])
             if len(coords) > 1: # In cases where there are identical error values
                 for coord in coords:
                     if not np.any(row_stroke_map == coord[0]):#row_stroke_map[coord[0]-1] != -1:
@@ -172,8 +173,8 @@ def heuristic_fallback():
         # take row 0, recalculate the smallest error excluding index 2,
         # but it's too difficult so just permutation of all overlaps and rearrange them
         error_maps = np.copy(base_matrix)
-        for col_min in col_mins:
-            coords = np.argwhere(error_maps == col_min)
+        for col_min in range(len(ref_geometry)):
+            coords = np.argwhere(error_maps == col_mins[col_min])
             if len(coords) > 1: # In cases where there are identical error values
                 for coord in coords:
                     if col_stroke_map[coord[1]-1] != -1:
@@ -187,14 +188,20 @@ def heuristic_fallback():
             col_stroke_map[loc[1]] = loc[0]
         if np.array2string(col_stroke_map) not in stroke_maps:
             stroke_maps[np.array2string(col_stroke_map)] = col_stroke_map
+        j = False
         for s in stroke_maps.values():
             #print(s)
-            heuristic_xml = minXml(ref_char, bases, stroke_set, s+1)
+            heuristic_alignment = np.delete(s, np.where(s == -1))+1
+            heuristic_xml = minXml(ref_char, bases, stroke_set, heuristic_alignment)
             try:
                 heuristic_score = getXmlScore(heuristic_xml)
             except:
+                j = True
+                print(s)
                 print("err:", f_name)
             compare_scores.append(heuristic_score)
+        if j:
+            print(compare_scores)
         greedy_alignment = np.array(alignStrokes(strokes, ref_geometry, p_strokes, ref_progress_percentage))+1
         greedy_xml = minXml(ref_char, bases, stroke_set, greedy_alignment)
         greedy_score = getXmlScore(greedy_xml)
