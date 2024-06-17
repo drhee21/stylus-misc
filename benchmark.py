@@ -34,39 +34,43 @@ def exhaustive():
                 #    print(f"Scoring permutation {j} of {len(exhaustive_scores)}")
             yield exhaustive_scores
             
-    exhaustive_scores = []
+    exhaustive_scores = {}
     for (gl, han_char, bases, f_name) in zip(g_data, han_chars, base_data, f_names):
         g, l = gl
         exhaust_maxes = []
         for e in computeExhaustive(ref_char, [f_name], data_dir, save = False, xml_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/GenXml/Exhaustive'):
             exhaust_maxes.append(e.max())
         original_score = np.max(exhaust_maxes)
-        exhaustive_scores.append(original_score)
+        exhaustive_scores[f_name] = original_score
+        #exhaustive_scores.append(original_score)
     return exhaustive_scores
 
 def greedy():
     ref_geometry, ref_progress_percentage, output_size = ref_data
     g_data, _, base_data, stroke_sets, _, f_names = char_data
-    heuristic_scores = []
+    #heuristic_scores = []
+    heuristic_scores = {}
     for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
         geometry, progress_percentage = geometry_length
         heuristic_alignment = np.array(alignStrokes(geometry, ref_geometry, progress_percentage, ref_progress_percentage))+1
         heuristic_xml = minXml(ref_char, bases, stroke_set, heuristic_alignment)
         heuristic_score = getXmlScore(heuristic_xml)
-        heuristic_scores.append(heuristic_score)
+        #heuristic_scores.append(heuristic_score)
+        heuristic_scores[f_name] = heuristic_score
     return heuristic_scores
     
 def heuristic():
     ref_geometry, ref_progress_percentage, output_size = ref_data
     g_data, _, base_data, stroke_sets, _, f_names = char_data
-    heuristic_scores = []
+    heuristic_scores = {}#[]
     for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
         #print(f_name)
         strokes, p_strokes = geometry_length
+        base_matrix = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
         if len(ref_geometry) != len(strokes):
+            print("skip", f_name)
             continue
         # Test through row/col
-        base_matrix = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
         #print(base_matrix)
         error_maps = np.copy(base_matrix)
         row_stroke_map = np.full(len(strokes), -1)
@@ -121,17 +125,19 @@ def heuristic():
             except:
                 print("err:", f_name)
             compare_scores.append(heuristic_score)
-        heuristic_scores.append(max(compare_scores))
+        #heuristic_scores.append(max(compare_scores))
+        heuristic_scores[f_name] = max(compare_scores)
     return heuristic_scores
 
 def heuristic_fallback():
     ref_geometry, ref_progress_percentage, output_size = ref_data
     g_data, _, base_data, stroke_sets, _, f_names = char_data
-    heuristic_scores = []
+    heuristic_scores = {}#[]
     for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
         #print(f_name)
         strokes, p_strokes = geometry_length
         if len(ref_geometry) != len(strokes):
+            print("skip:", f_name)
             continue
         # Test through row/col
         base_matrix = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
@@ -189,11 +195,12 @@ def heuristic_fallback():
             except:
                 print("err:", f_name)
             compare_scores.append(heuristic_score)
-            greedy_alignment = np.array(alignStrokes(strokes, ref_geometry, p_strokes, ref_progress_percentage))+1
-            greedy_xml = minXml(ref_char, bases, stroke_set, greedy_alignment)
-            greedy_score = getXmlScore(greedy_xml)
-            compare_scores.append(greedy_score)
-        heuristic_scores.append(max(compare_scores))
+        greedy_alignment = np.array(alignStrokes(strokes, ref_geometry, p_strokes, ref_progress_percentage))+1
+        greedy_xml = minXml(ref_char, bases, stroke_set, greedy_alignment)
+        greedy_score = getXmlScore(greedy_xml)
+        compare_scores.append(greedy_score)
+        #heuristic_scores.append(max(compare_scores))
+        heuristic_scores[f_name] = max(compare_scores)
     return heuristic_scores
 
 def run_benchmarks(funcs, trials):
@@ -247,27 +254,56 @@ while True:
     excl_exhaustive = input("Exclude exhaustive (T/F)? ")
     if excl_exhaustive.lower() == "t":
         benchmarks = run_benchmarks([greedy, heuristic, heuristic_fallback], trials)
-        for (greedy_score, heuristic_score, heuristic_fallback_score) in zip(benchmarks[0][1], benchmarks[1][1], benchmarks[2][1]):
-            best_score = max(greedy_score, heuristic_score, heuristic_fallback_score)
-            if best_score == greedy_score:
+        greedy_scores = benchmarks[0][1]
+        heuristic_scores = benchmarks[1][1]
+        heuristic_fallback_scores = benchmarks[2][1]
+        for f_name in char_data[5]:
+            try:
+                best_score = max(greedy_scores[f_name], heuristic_scores[f_name], heuristic_fallback_scores[f_name])
+            except:
+                continue
+            if best_score == greedy_scores[f_name]:
                 greedy_wins += 1
-            if best_score == heuristic_score:
+            if best_score == heuristic_scores[f_name]:
                 heuristic_wins += 1
-            if best_score == heuristic_fallback_score:
+            if best_score == heuristic_fallback_scores[f_name]:
                 heuristic_fallback_wins += 1
-        format_benchmarks([greedy, heuristic, heuristic_fallback], benchmarks, [greedy_wins, heuristic_wins, heuristic_fallback_wins], len(char_data[0]), int(trials))
+            check = min(len(greedy_scores), len(heuristic_scores), len(heuristic_fallback_scores))
+            if check == len(greedy_scores):
+                total = len(greedy_scores)
+            elif check == len(heuristic_scores):
+                total = len(heuristic_scores)
+            elif check == len(heuristic_fallback_scores):
+                total = len(heuristic_fallback_scores)
+        format_benchmarks([greedy, heuristic, heuristic_fallback], benchmarks, [greedy_wins, heuristic_wins, heuristic_fallback_wins], total, int(trials))
     else:
         exhaustive_wins = 0
         benchmarks = run_benchmarks([exhaustive, greedy, heuristic, heuristic_fallback], trials)
-        for (exhaustive_score, greedy_score, heuristic_score, heuristic_fallback_score) in zip(benchmarks[0][1], benchmarks[1][1], benchmarks[2][1], benchmarks[3][1]):
-            best_score = max(exhaustive_score, greedy_score, heuristic_score, heuristic_fallback_score)
-            if best_score == exhaustive_score:
+        exhaustive_scores = benchmarks[0][1]
+        greedy_scores = benchmarks[1][1]
+        heuristic_scores = benchmarks[2][1]
+        heuristic_fallback_scores = benchmarks[3][1]
+        for f_name in char_data[5]:
+            try:
+                best_score = max(exhaustive_scores[f_name], greedy_scores[f_name], heuristic_scores[f_name], heuristic_fallback_scores[f_name])
+            except:
+                continue
+            if best_score == exhaustive_scores[f_name]:
                 exhaustive_wins += 1
-            if best_score == greedy_score:
+            if best_score == greedy_scores[f_name]:
                 greedy_wins += 1
-            if best_score == heuristic_score:
+            if best_score == heuristic_scores[f_name]:
                 heuristic_wins += 1
-            if best_score == heuristic_fallback_score:
+            if best_score == heuristic_fallback_scores[f_name]:
                 heuristic_fallback_wins += 1
-        format_benchmarks([exhaustive, greedy, heuristic, heuristic_fallback], benchmarks, [exhaustive_wins, greedy_wins, heuristic_wins, heuristic_fallback_wins], len(char_data[0]), int(trials))
+            check = min(len(exhaustive_scores), len(greedy_scores), len(heuristic_scores), len(heuristic_fallback_scores))
+            if check == len(exhaustive_scores):
+                total = len
+            elif check == len(greedy_scores):
+                total = len(greedy_scores)
+            elif check == len(heuristic_scores):
+                total = len(heuristic_scores)
+            elif check == len(heuristic_fallback_scores):
+                total = len(heuristic_fallback_scores)
+        format_benchmarks([exhaustive, greedy, heuristic, heuristic_fallback], benchmarks, [exhaustive_wins, greedy_wins, heuristic_wins, heuristic_fallback_wins], total, int(trials))
     print("")
