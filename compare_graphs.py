@@ -5,7 +5,7 @@ import numpy as np
 from readCsv import readResult, readScore
 
 #if I get this to work, this will graph genes vs scores, with the ability to put multiple on top of each other. That last part doesn't work, it just makes a second graph next to the first at the moment
-def graphScores(file1, file2 = '', file3 = ''): 
+def graphScores(file1, file2 = '', file3 = '', file4 = ''): 
     #Input: csv files that are archetype/gene score tables (1-3), if multiple, they need to be about the same genes and archetypes
     #Output: a graph of the data. as described above the definition line
     g1, a1, d1 = readResult(file1)
@@ -14,22 +14,31 @@ def graphScores(file1, file2 = '', file3 = ''):
     #if you want to graph data from a different archetype, change the 0 to the number that matches that archetype number
     #I can't graph them all because the csv file I'm using has almost 600 genes, so graphing 600 points alone is a lot, I don't want
     #to also multiply that by 11 archetypes
-    arche = 6
+    arche = 5
     y = dt1[arche]
-    #plt.plot(x, y)
-    fig = plt.figure(figsize = (25, 5))
-    ax = fig.add_subplot()
-    ax.plot(x, y)
-    ax.tick_params(axis='x', rotation=70)
-    ax.set_xticks([])
-    ax.set_title('Graph of data using archetype ' + a1[arche])
+    fig, ax = plt.subplots(figsize=(25, 10))
+    #ax.figure(figsize = (25, 5))
+    ax.plot(x, y, label = 'Exhaustive')
+    ax.set_ylabel('Scores')
+    ax.set_xlabel('Genes in arbitrary order')
+    ax.set_title('Score of Heuristics and Exhaustive using ' + a1[arche])
     if file2:
         g2, a2, d2 = readResult(file2)
-        x = g2
         dt2=np.transpose(d2)
         y = dt2[arche]
-        ax.plot(x,y)
-
+        ax.plot(x,y, label = 'Heuristic 1')
+    if file3:
+        g3, a3, d3 = readResult(file3)
+        dt3=np.transpose(d3)
+        y = dt3[arche]
+        ax.plot(x,y, label = 'Heuristic 2')
+    if file4:
+        g4, a4, d4 = readResult(file4)
+        dt4=np.transpose(d4)
+        y = dt4[arche]
+        ax.plot(x,y, label = 'Heuristic 3')
+    ax.set_xticklabels([])
+    plt.legend(loc='upper right')
     plt.show()
     return
 
@@ -44,9 +53,16 @@ def graphExhaustHeurist(exhaustFile, heuristFile):
     heurist = hData.flatten()
 
     plt.scatter(exhaust, heurist, s=.5)
+    plt.xlabel('Exhaustive Scores')
+    plt.ylabel('Heuristic Scores')
+    plt.title('Exhaustive vs Heuristic Scores')
+    
     plt.show()
     return
 
+#I have no idea what the functionality is of the below two charts, they are only affected by the particular data presented and basically are useless I think
+#I'm not deleting them in case they are useful and I forgot, or if they can be modified in the future to do something useful
+'''
 #this chart will have the mean and standard dev of the exhaustive and heuristic scores on top of each other, covering scores between above .5 down to 0
 def scoreChart1(exhaustFile, heuristFile):
     eGene, eArch, eData = readResult(exhaustFile)
@@ -161,6 +177,10 @@ def scoreChart1(exhaustFile, heuristFile):
     stanD = [s1, s2, s3, s4, s5, s6, s7]
 
     plt.errorbar(values, means, stanD, label='Heuristic')
+
+    plt.xlabel('Scores')
+    plt.ylabel('Mean scores')
+    plt.title('Mean and Standard Deviation of sorted scores')
 
     plt.legend(loc='lower right')
     plt.show()
@@ -330,7 +350,8 @@ def scoreChart2(exhaustFile, heuristFile):
     plt.show()
     
     return
-#this will graph the percent error of the exhaust against the heuristic with errorbars, with all values (0-over.5)
+'''
+#this will graph the error of the exhaust against the heuristic with errorbars, with all values (0-over.5)
 def correctChart1(exhaustFile, heuristFile):
     eGene, eArch, eData = readResult(exhaustFile)
     hGene, hArch, hData = readResult(heuristFile)
@@ -426,7 +447,9 @@ def correctChart1(exhaustFile, heuristFile):
     means = [m1, m2, m3, m4, m5, m6, m7]
     stanD = [s1, s2, s3, s4, s5, s6, s7]
     print("Note: the size of the error bars represents the standard deviation, but the bars are centered around the median on the graph. There aren't any negative errors even if the bars show it")
-
+    plt.xlabel('Scores')
+    plt.ylabel('Error')
+    plt.title('Error of Heuristic against Exhaustive Scores')
     plt.errorbar(values, means, stanD)
     plt.show()
 
@@ -565,26 +588,41 @@ def correctChart2(exhaustFile, heuristFile):
     stanD = [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10]
 
     plt.errorbar(values, means, stanD)
-
+    plt.xlabel('Scores')
+    plt.ylabel('Error')
+    plt.title('Error of Heuristic against Exhaustive Scores')
     print("Note: the size of the error bars represents the standard deviation, but the bars are centered around the median on the graph. There aren't any negative errors even if the bars show it")
 
     plt.show()
 
     return
-
-def compareHeuristics(exhaustFile, heurist1File, heurist2File):
+#This creates a plot of the error (if e = ehaustive score and h = heuristic score, then error = (e-h)/h) of the heuristics sorted by their exhaustive scores
+#These graphs are all put on one graph, so it's easier to compare.
+def compareHeuristics(exhaustFile, heurist1File, heurist2File, heurist3File = ''):
+    f3 = False
+    if heurist3File:
+        f3 = True
+    
     eGene, eArch, eData = readResult(exhaustFile)
     h1Gene, h1Arch, h1Data = readResult(heurist1File)
     h2Gene, h2Arch, h2Data = readResult(heurist2File)
+    if f3:
+        h3Gene, h3Arch, h3Data = readResult(heurist3File)
+    
 
     exhaust = eData.flatten()
     heurist1 = h1Data.flatten()
     heurist2 = h2Data.flatten()
-
-    a = exhaust<.05
+    if f3:
+        heurist3 = h3Data.flatten()
+    
+    a = exhaust < .03
     e = exhaust[a]
     h1 = heurist1[a]
     h2 = heurist2[a]
+    if f3:
+        h3 = heurist3[a]
+        err3 = []
     err1 = []
     err2 = []
     for i in range(len(e)):
@@ -592,18 +630,27 @@ def compareHeuristics(exhaustFile, heurist1File, heurist2File):
         err1.append(x)
         x = (e[i]-h2[i])/e[i]
         err2.append(x)
+        if f3:
+            x = (e[i]-h3[i])/e[i]
+            err3.append(x)
     m11 = np.mean(err1)
     s11 = np.std(err1)
     m21 = np.mean(err2)
     s21 = np.std(err2)
+    if f3:
+        m31 = np.mean(err3)
+        s31 = np.std(err3)
     
 
-    a1 = exhaust > .05
-    a2 = exhaust < .1
+    a1 = exhaust > .03
+    a2 = exhaust < .06
     a = a1*a2
     e = exhaust[a]
     h1 = heurist1[a]
     h2 = heurist2[a]
+    if f3:
+        h3 = heurist3[a]
+        err3 = []
     err1 = []
     err2 = []
     for i in range(len(e)):
@@ -611,17 +658,80 @@ def compareHeuristics(exhaustFile, heurist1File, heurist2File):
         err1.append(x)
         x = (e[i]-h2[i])/e[i]
         err2.append(x)
+        if f3:
+            x = (e[i]-h3[i])/e[i]
+            err3.append(x)
     m12 = np.mean(err1)
     s12 = np.std(err1)
     m22 = np.mean(err2)
     s22 = np.std(err2)
+    if f3:
+        m32 = np.mean(err3)
+        s32 = np.std(err3)
 
-    a1 = exhaust > .1
+    a1 = exhaust > .06
+    a2 = exhaust < .09
+    a = a1*a2
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    if f3:
+        h3 = heurist3[a]
+        err3 = []
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+        if f3:
+            x = (e[i]-h3[i])/e[i]
+            err3.append(x)
+    m13 = np.mean(err1)
+    s13 = np.std(err1)
+    m23 = np.mean(err2)
+    s23 = np.std(err2)
+    if f3:
+        m33 = np.mean(err3)
+        s33 = np.std(err3)
+
+    a1 = exhaust > .09
+    a2 = exhaust < .12
+    a = a1*a2
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    if f3:
+        h3 = heurist3[a]
+        err3 = []
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+        if f3:
+            x = (e[i]-h3[i])/e[i]
+            err3.append(x)
+    m14 = np.mean(err1)
+    s14 = np.std(err1)
+    m24 = np.mean(err2)
+    s24 = np.std(err2)
+    if f3:
+        m34 = np.mean(err3)
+        s34 = np.std(err3)
+
+    a1 = exhaust > .12
     a2 = exhaust < .15
     a = a1*a2
     e = exhaust[a]
     h1 = heurist1[a]
     h2 = heurist2[a]
+    if f3:
+        h3 = heurist3[a]
+        err3 = []
     err1 = []
     err2 = []
     for i in range(len(e)):
@@ -629,53 +739,26 @@ def compareHeuristics(exhaustFile, heurist1File, heurist2File):
         err1.append(x)
         x = (e[i]-h2[i])/e[i]
         err2.append(x)
-    m13 = np.mean(err1)
-    s13 = np.std(err1)
-    m23 = np.mean(err2)
-    s23 = np.std(err2)
-
-    a1 = exhaust > .15
-    a2 = exhaust < .2
-    a = a1*a2
-    e = exhaust[a]
-    h1 = heurist1[a]
-    h2 = heurist2[a]
-    err1 = []
-    err2 = []
-    for i in range(len(e)):
-        x = (e[i]-h1[i])/e[i]
-        err1.append(x)
-        x = (e[i]-h2[i])/e[i]
-        err2.append(x)
-    m14 = np.mean(err1)
-    s14 = np.std(err1)
-    m24 = np.mean(err2)
-    s24 = np.std(err2)
-
-    a1 = exhaust > .4
-    a2 = exhaust < .45
-    a = a1*a2
-    e = exhaust[a]
-    h1 = heurist1[a]
-    h2 = heurist2[a]
-    err1 = []
-    err2 = []
-    for i in range(len(e)):
-        x = (e[i]-h1[i])/e[i]
-        err1.append(x)
-        x = (e[i]-h2[i])/e[i]
-        err2.append(x)
+        if f3:
+            x = (e[i]-h3[i])/e[i]
+            err3.append(x)
     m15 = np.mean(err1)
     s15 = np.std(err1)
     m25 = np.mean(err2)
     s25 = np.std(err2)
+    if f3:
+        m35 = np.mean(err3)
+        s35= np.std(err3)
 
-    a1 = exhaust > .45
-    a2 = exhaust < .5
+    a1 = exhaust > .15
+    a2 = exhaust < .18
     a = a1*a2
     e = exhaust[a]
     h1 = heurist1[a]
     h2 = heurist2[a]
+    if f3:
+        h3 = heurist3[a]
+        err3 = []
     err1 = []
     err2 = []
     for i in range(len(e)):
@@ -683,17 +766,26 @@ def compareHeuristics(exhaustFile, heurist1File, heurist2File):
         err1.append(x)
         x = (e[i]-h2[i])/e[i]
         err2.append(x)
+        if f3:
+            x = (e[i]-h3[i])/e[i]
+            err3.append(x)
     m16 = np.mean(err1)
     s16 = np.std(err1)
     m26 = np.mean(err2)
     s26 = np.std(err2)
+    if f3:
+        m36 = np.mean(err3)
+        s36 = np.std(err3)
     
-    a1 = exhaust > .5
-    a2 = exhaust < .55
+    a1 = exhaust > .18
+    a2 = exhaust < .21
     a = a1*a2
     e = exhaust[a]
     h1 = heurist1[a]
     h2 = heurist2[a]
+    if f3:
+        h3 = heurist3[a]
+        err3 = []
     err1 = []
     err2 = []
     for i in range(len(e)):
@@ -701,20 +793,317 @@ def compareHeuristics(exhaustFile, heurist1File, heurist2File):
         err1.append(x)
         x = (e[i]-h2[i])/e[i]
         err2.append(x)
+        if f3:
+            x = (e[i]-h3[i])/e[i]
+            err3.append(x)
     m17 = np.mean(err1)
     s17 = np.std(err1)
     m27 = np.mean(err2)
     s27 = np.std(err2)
+    if f3:
+        m37 = np.mean(err3)
+        s37 = np.std(err3)
 
-    values = [.025, .075, .125, .175, .425, .475, .525]
-    means1 = [m11, m12, m13, m14, m15, m16, m17]
-    stanD1 = [s11, s12, s13, s14, s15, s16, s17]
-    means2 = [m21, m22, m23, m24, m25, m26, m27]
-    stanD2 = [m21, m22, m23, m24, m25, m26, m27]
+    a1 = exhaust > .21
+    a2 = exhaust < .25
+    a = a1*a2
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    if f3:
+        h3 = heurist3[a]
+        err3 = []
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+        if f3:
+            x = (e[i]-h3[i])/e[i]
+            err3.append(x)
+    m18 = np.mean(err1)
+    s18 = np.std(err1)
+    m28 = np.mean(err2)
+    s28 = np.std(err2)
+    if f3:
+        m38 = np.mean(err3)
+        s38 = np.std(err3)
+
+    values = [.015, .045, .075, .105, .135, .165, .195, .23]
+
+    means1 = [m11, m12, m13, m14, m15, m16, m17, m18]
+    stanD1 = [s11, s12, s13, s14, s15, s16, s17, s18]
+    means2 = [m21, m22, m23, m24, m25, m26, m27, m28]
+    stanD2 = [m21, m22, m23, m24, m25, m26, m27, s28]
     print("Note: the size of the error bars represents the standard deviation, but the bars are centered around the median on the graph. There aren't any negative errors even if the bars show it")
     #the labels below can be edited to actually say what the heuristics are displaying
     plt.errorbar(values, means1, stanD1, label = 'Heuristic 1')
     plt.errorbar(values, means2, stanD2, label = 'Heuristic 2')
-    plt.legend(loc='lower right')
+    if f3:
+        means3 = [m31, m32, m33, m34, m35, m36, m37, m38]
+        stanD3 = [s31, s32, s33, s34, s35, s36, s37, s38]
+        plt.errorbar(values, means3, stanD3, label = 'Heuristic 3')
+    plt.title('Error for different heuristics, with standard dev error bars')
+    plt.xlabel('Correct score for each gene')
+    plt.ylabel('Error ((exhaustive-heuristic)/exhaustive)')
+    plt.legend(loc='upper right')
+    plt.show()
+    return
+
+#just like all of the other #2s, this is the version of compareHeuristics that is focused on just values between 0 and .1, because that is usually where heuristics do the worst.
+def compareHeuristics2(exhaustFile, heurist1File, heurist2File, heurist3File = ''):
+    f3 = False
+    if heurist3File:
+        f3 = True
+    
+    eGene, eArch, eData = readResult(exhaustFile)
+    h1Gene, h1Arch, h1Data = readResult(heurist1File)
+    h2Gene, h2Arch, h2Data = readResult(heurist2File)
+    if f3:
+        h3Gene, h3Arch, h3Data = readResult(heurist3File)
+    
+
+    exhaust = eData.flatten()
+    heurist1 = h1Data.flatten()
+    heurist2 = h2Data.flatten()
+    if f3:
+        heurist3 = h3Data.flatten()
+    
+    a = exhaust < .015
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    if f3:
+        h3 = heurist3[a]
+        err3 = []
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+        if f3:
+            x = (e[i]-h3[i])/e[i]
+            err3.append(x)
+    m11 = np.mean(err1)
+    s11 = np.std(err1)
+    m21 = np.mean(err2)
+    s21 = np.std(err2)
+    if f3:
+        m31 = np.mean(err3)
+        s31 = np.std(err3)
+    
+
+    a1 = exhaust > .015
+    a2 = exhaust < .03
+    a = a1*a2
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    if f3:
+        h3 = heurist3[a]
+        err3 = []
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+        if f3:
+            x = (e[i]-h3[i])/e[i]
+            err3.append(x)
+    m12 = np.mean(err1)
+    s12 = np.std(err1)
+    m22 = np.mean(err2)
+    s22 = np.std(err2)
+    if f3:
+        m32 = np.mean(err3)
+        s32 = np.std(err3)
+
+    a1 = exhaust > .03
+    a2 = exhaust < .045
+    a = a1*a2
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    if f3:
+        h3 = heurist3[a]
+        err3 = []
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+        if f3:
+            x = (e[i]-h3[i])/e[i]
+            err3.append(x)
+    m13 = np.mean(err1)
+    s13 = np.std(err1)
+    m23 = np.mean(err2)
+    s23 = np.std(err2)
+    if f3:
+        m33 = np.mean(err3)
+        s33 = np.std(err3)
+
+    a1 = exhaust > .045
+    a2 = exhaust < .06
+    a = a1*a2
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    if f3:
+        h3 = heurist3[a]
+        err3 = []
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+        if f3:
+            x = (e[i]-h3[i])/e[i]
+            err3.append(x)
+    m14 = np.mean(err1)
+    s14 = np.std(err1)
+    m24 = np.mean(err2)
+    s24 = np.std(err2)
+    if f3:
+        m34 = np.mean(err3)
+        s34 = np.std(err3)
+
+    a1 = exhaust > .06
+    a2 = exhaust < .075
+    a = a1*a2
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    if f3:
+        h3 = heurist3[a]
+        err3 = []
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+        if f3:
+            x = (e[i]-h3[i])/e[i]
+            err3.append(x)
+    m15 = np.mean(err1)
+    s15 = np.std(err1)
+    m25 = np.mean(err2)
+    s25 = np.std(err2)
+    if f3:
+        m35 = np.mean(err3)
+        s35= np.std(err3)
+
+    a1 = exhaust > .075
+    a2 = exhaust < .09
+    a = a1*a2
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    if f3:
+        h3 = heurist3[a]
+        err3 = []
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+        if f3:
+            x = (e[i]-h3[i])/e[i]
+            err3.append(x)
+    m16 = np.mean(err1)
+    s16 = np.std(err1)
+    m26 = np.mean(err2)
+    s26 = np.std(err2)
+    if f3:
+        m36 = np.mean(err3)
+        s36 = np.std(err3)
+    
+    a1 = exhaust > .09
+    a2 = exhaust < .105
+    a = a1*a2
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    if f3:
+        h3 = heurist3[a]
+        err3 = []
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+        if f3:
+            x = (e[i]-h3[i])/e[i]
+            err3.append(x)
+    m17 = np.mean(err1)
+    s17 = np.std(err1)
+    m27 = np.mean(err2)
+    s27 = np.std(err2)
+    if f3:
+        m37 = np.mean(err3)
+        s37 = np.std(err3)
+
+    a1 = exhaust > .105
+    a2 = exhaust < .12
+    a = a1*a2
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    if f3:
+        h3 = heurist3[a]
+        err3 = []
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+        if f3:
+            x = (e[i]-h3[i])/e[i]
+            err3.append(x)
+    m18 = np.mean(err1)
+    s18 = np.std(err1)
+    m28 = np.mean(err2)
+    s28 = np.std(err2)
+    if f3:
+        m38 = np.mean(err3)
+        s38 = np.std(err3)
+
+    values = [.015, .03, .045, .06, .075, .09, .105, .120]
+
+    means1 = [m11, m12, m13, m14, m15, m16, m17, m18]
+    stanD1 = [s11, s12, s13, s14, s15, s16, s17, s18]
+    means2 = [m21, m22, m23, m24, m25, m26, m27, m28]
+    stanD2 = [m21, m22, m23, m24, m25, m26, m27, s28]
+    print("Note: the size of the error bars represents the standard deviation, but the bars are centered around the median on the graph. There aren't any negative errors even if the bars show it")
+    #the labels below can be edited to actually say what the heuristics are displaying
+    fig, ax = plt.subplots(figsize=(7, 4))
+    ax.errorbar(values, means1, stanD1, label = 'Heuristic 1')
+    ax.errorbar(values, means2, stanD2, label = 'Heuristic 2')
+    if f3:
+        means3 = [m31, m32, m33, m34, m35, m36, m37, m38]
+        stanD3 = [s31, s32, s33, s34, s35, s36, s37, s38]
+        ax.errorbar(values, means3, stanD3, label = 'Heuristic 3')
+    ax.set_title('Error for different heuristics, with standard dev error bars')
+    ax.set_xlabel('Correct score for each gene')
+    ax.set_ylabel('Error ((exhaustive-heuristic)/exhaustive)')
+    plt.legend(loc='upper right')
     plt.show()
     return
