@@ -47,8 +47,8 @@ def graphExhaustHeurist(exhaustFile, heuristFile):
     plt.show()
     return
 
-#this chart will have the mean and standard dev of 
-def correctChart(exhaustFile, heuristFile):
+#this chart will have the mean and standard dev of the exhaustive and heuristic scores on top of each other, covering scores between above .5 down to 0
+def scoreChart1(exhaustFile, heuristFile):
     eGene, eArch, eData = readResult(exhaustFile)
     hGene, hArch, hData = readResult(heuristFile)
 
@@ -102,12 +102,12 @@ def correctChart(exhaustFile, heuristFile):
     m7 = np.mean(e7)
     s7 = np.std(e7)
 
-    values = [0, .05, .1, .15, .4, .45, .5]
+    values = [.025, .075, .125, .175, .425, .475, .525]
     means = [m1, m2, m3, m4, m5, m6, m7]
     stanD = [s1, s2, s3, s4, s5, s6, s7]
 
 
-    plt.errorbar(values, means, stanD, label='exhaustive')
+    plt.errorbar(values, means, stanD, label='Exhaustive')
 
     a = heurist<.05
     h1 = heurist[a]    
@@ -156,17 +156,565 @@ def correctChart(exhaustFile, heuristFile):
     m7 = np.mean(h7)
     s7 = np.std(h7)
 
-    values = [0, .05, .1, .15, .4, .45, .5]
+    values = [.025, .075, .125, .175, .425, .475, .525]
     means = [m1, m2, m3, m4, m5, m6, m7]
     stanD = [s1, s2, s3, s4, s5, s6, s7]
 
-    plt.errorbar(values, means, stanD, label='Holiday heuristic')
+    plt.errorbar(values, means, stanD, label='Heuristic')
 
     plt.legend(loc='lower right')
     plt.show()
     
     return
 
-#this is just a histogram of the error in 
-#def errorHistogram(exhaustFile, heuristFile):
+#this chart will have the mean and standard dev of the scores, with both exhaustive and heuristic on the same graph. This iteration focuses on the <1 numbers because that's where most of the deviation comes from 
+def scoreChart2(exhaustFile, heuristFile):
+    eGene, eArch, eData = readResult(exhaustFile)
+    hGene, hArch, hData = readResult(heuristFile)
+
+    exhaust = eData.flatten()
+    heurist = hData.flatten()
+
+    a = exhaust<.01
+    e1 = exhaust[a]    
+    m1 = np.mean(e1)
+    s1 = np.std(e1)
+
+    a1 = exhaust > .01
+    a2 = exhaust < .02
+    a = a1*a2
+    e2 = exhaust[a]
+    m2 = np.mean(e2)
+    s2 = np.std(e2)
+
+    a1 = exhaust > .02
+    a2 = exhaust < .03
+    a = a1*a2
+    e3 = exhaust[a]
+    m3 = np.mean(e3)
+    s3 = np.std(e3)
+
+    a1 = exhaust > .03
+    a2 = exhaust < .04
+    a = a1*a2
+    e4 = exhaust[a]
+    m4 = np.mean(e4)
+    s4 = np.std(e4)
+
+    a1 = exhaust > .04
+    a2 = exhaust < .05
+    a = a1*a2
+    e5 = exhaust[a]
+    m5 = np.mean(e5)
+    s5 = np.std(e5)
+
+    a1 = exhaust > .05
+    a2 = exhaust < .06
+    a = a1*a2
+    e6 = exhaust[a]
+    m6 = np.mean(e6)
+    s6 = np.std(e6)
     
+    a1 = exhaust > .06
+    a2 = exhaust < .07
+    a = a1*a2
+    e7 = exhaust[a]
+    m7 = np.mean(e7)
+    s7 = np.std(e7)
+
+    a1 = exhaust > .07
+    a2 = exhaust < .08
+    a = a1*a2
+    e8 = exhaust[a]
+    m8 = np.mean(e8)
+    s8 = np.std(e8)
+
+    a1 = exhaust > .08
+    a2 = exhaust < .09
+    a = a1*a2
+    e9 = exhaust[a]
+    m9 = np.mean(e9)
+    s9 = np.std(e9)
+
+    a1 = exhaust > .09
+    a2 = exhaust < .1
+    a = a1*a2
+    e10 = exhaust[a]
+    m10 = np.mean(e10)
+    s10 = np.std(e10)
+
+    values = [.005, .015, .025, .035, .045, .055, .065, .075, .085, .095]
+    means = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10]
+    stanD = [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10]
+
+
+    plt.errorbar(values, means, stanD, label='Exhaustive')
+
+    a = heurist<.01
+    h1 = heurist[a]    
+    m1 = np.mean(h1)
+    s1 = np.std(h1)
+
+    a1 = heurist > .01
+    a2 = heurist < .02
+    a = a1*a2
+    h2 = heurist[a]
+    m2 = np.mean(h2)
+    s2 = np.std(h2)
+
+    a1 = heurist > .02
+    a2 = heurist < .03
+    a = a1*a2
+    h3 = heurist[a]
+    m3 = np.mean(h3)
+    s3 = np.std(h3)
+
+    a1 = heurist > .03
+    a2 = heurist < .04
+    a = a1*a2
+    h4 = heurist[a]
+    m4 = np.mean(h4)
+    s4 = np.std(h4)
+
+    a1 = heurist > .04
+    a2 = heurist < .05
+    a = a1*a2
+    h5 = heurist[a]
+    m5 = np.mean(h5)
+    s5 = np.std(h5)
+
+    a1 = heurist > .05
+    a2 = heurist < .06
+    a = a1*a2
+    h6 = heurist[a]
+    m6 = np.mean(h6)
+    s6 = np.std(h6)
+    
+    a1 = heurist > .06
+    a2 = heurist < .07
+    a = a1*a2
+    h7 = heurist[a]
+    m7 = np.mean(h7)
+    s7 = np.std(h7)
+
+    a1 = heurist > .07
+    a2 = heurist < .08
+    a = a1*a2
+    h8 = heurist[a]
+    m8 = np.mean(h8)
+    s8 = np.std(h8)
+
+    a1 = heurist > .08
+    a2 = heurist < .09
+    a = a1*a2
+    h9 = heurist[a]
+    m9 = np.mean(h9)
+    s9 = np.std(h9)
+
+    a1 = heurist > .09
+    a2 = heurist < .1
+    a = a1*a2
+    h10 = heurist[a]
+    m10 = np.mean(h10)
+    s10 = np.std(h10)
+
+
+
+    values = [.005, .015, .025, .035, .045, .055, .065, .075, .085, .095]
+    means = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10]
+    stanD = [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10]
+
+    plt.errorbar(values, means, stanD, label='Heuristic')
+
+    plt.legend(loc='lower right')
+    plt.show()
+    
+    return
+#this will graph the percent error of the exhaust against the heuristic with errorbars, with all values (0-over.5)
+def correctChart1(exhaustFile, heuristFile):
+    eGene, eArch, eData = readResult(exhaustFile)
+    hGene, hArch, hData = readResult(heuristFile)
+
+    exhaust = eData.flatten()
+    heurist = hData.flatten()
+
+    a = exhaust<.05
+    e1 = exhaust[a]
+    h1 = heurist[a]
+    err = []
+    for i in range(len(e1)):
+        x = (e1[i]-h1[i])/e1[i]
+        err.append(x)
+    m1 = np.mean(err)
+    s1 = np.std(err)
+    
+
+    a1 = exhaust > .05
+    a2 = exhaust < .1
+    a = a1*a2
+    e2 = exhaust[a]
+    h2 = heurist[a]
+    err = []
+    for i in range(len(e2)):
+        x = (e2[i]-h2[i])/e2[i]
+        err.append(x)
+    print(err)
+    m2 = np.mean(err)
+    s2 = np.std(err)
+
+    a1 = exhaust > .1
+    a2 = exhaust < .15
+    a = a1*a2
+    e3 = exhaust[a]
+    h3 = heurist[a]
+    err = []
+    for i in range(len(e3)):
+        x = (e3[i]-h3[i])/e3[i]
+        err.append(x)
+    m3 = np.mean(err)
+    s3 = np.std(err)
+
+    a1 = exhaust > .15
+    a2 = exhaust < .2
+    a = a1*a2
+    e4 = exhaust[a]
+    h4 = heurist[a]
+    err = []
+    for i in range(len(e4)):
+        x = (e4[i]-h4[i])/e4[i]
+        err.append(x)
+    m4 = np.mean(err)
+    s4 = np.std(err)
+
+    a1 = exhaust > .4
+    a2 = exhaust < .45
+    a = a1*a2
+    e5 = exhaust[a]
+    h5 = heurist[a]
+    err = []
+    for i in range(len(e5)):
+        x = (e5[i]-h5[i])/e5[i]
+        err.append(x)
+    m5 = np.mean(err)
+    s5 = np.std(err)
+
+    a1 = exhaust > .45
+    a2 = exhaust < .5
+    a = a1*a2
+    e6 = exhaust[a]
+    h6 = heurist[a]
+    err = []
+    for i in range(len(e6)):
+        x = (e6[i]-h6[i])/e6[i]
+        err.append(x)
+    m6 = np.mean(err)
+    s6 = np.std(err)
+    
+    a1 = exhaust > .5
+    a2 = exhaust < .55
+    a = a1*a2
+    e7 = exhaust[a]
+    h7 = heurist[a]
+    err = []
+    for i in range(len(e7)):
+        x = (e7[i]-h7[i])/e7[i]
+        err.append(x)
+    m7 = np.mean(err)
+    s7 = np.std(err)
+
+    values = [.025, .075, .125, .175, .425, .475, .525]
+    means = [m1, m2, m3, m4, m5, m6, m7]
+    stanD = [s1, s2, s3, s4, s5, s6, s7]
+    print("Note: the size of the error bars represents the standard deviation, but the bars are centered around the median on the graph. There aren't any negative errors even if the bars show it")
+
+    plt.errorbar(values, means, stanD)
+    plt.show()
+
+    return
+
+
+#Just like the difference between scoresChart1 and 2, this is the same as correctChart1 except it focuses on the <.1 numbers because those have the greatest error
+def correctChart2(exhaustFile, heuristFile):
+
+    eGene, eArch, eData = readResult(exhaustFile)
+    hGene, hArch, hData = readResult(heuristFile)
+
+    exhaust = eData.flatten()
+    heurist = hData.flatten()
+    
+    a = exhaust<.01
+    e1 = exhaust[a]
+    h1 = heurist[a]    
+    err = []
+    for i in range(len(h1)):
+        x = (e1[i]-h1[i])/e1[i]
+        err.append(x)
+    m1 = np.mean(err)
+    s1 = np.std(err)
+
+    a1 = exhaust > .01
+    a2 = exhaust < .02
+    a = a1*a2
+    e2 = exhaust[a]
+    h2 = heurist[a]    
+    err = []
+    for i in range(len(h2)):
+        x = (e2[i]-h2[i])/e2[i]
+        err.append(x)
+    m2 = np.mean(err)
+    s2 = np.std(err)
+
+    a1 = exhaust > .02
+    a2 = exhaust < .03
+    a = a1*a2
+    e3 = exhaust[a]
+    h3 = heurist[a]    
+    err = []
+    for i in range(len(h3)):
+        x = (e3[i]-h3[i])/e3[i]
+        err.append(x)
+    m3 = np.mean(err)
+    s3 = np.std(err)
+
+    a1 = exhaust > .03
+    a2 = exhaust < .04
+    a = a1*a2
+    e4 = exhaust[a]
+    h4 = heurist[a]    
+    err = []
+    for i in range(len(h4)):
+        x = (e4[i]-h4[i])/e4[i]
+        err.append(x)
+    m4 = np.mean(err)
+    s4 = np.std(err)
+    
+    a1 = exhaust > .04
+    a2 = exhaust < .05
+    a = a1*a2
+    e5 = exhaust[a]
+    h5 = heurist[a]    
+    err = []
+    for i in range(len(h5)):
+        x = (e5[i]-h5[i])/e5[i]
+        err.append(x)
+    m5 = np.mean(err)
+    s5 = np.std(err)
+
+    a1 = exhaust > .05
+    a2 = exhaust < .06
+    a = a1*a2
+    e6 = exhaust[a]
+    h6 = heurist[a]    
+    err = []
+    for i in range(len(h6)):
+        x = (e6[i]-h6[i])/e6[i]
+        err.append(x)
+    m6 = np.mean(err)
+    s6 = np.std(err)
+    
+    a1 = exhaust > .06
+    a2 = exhaust < .07
+    a = a1*a2
+    e7 = exhaust[a]
+    h7 = heurist[a]    
+    err = []
+    for i in range(len(h7)):
+        x = (e7[i]-h7[i])/e7[i]
+        err.append(x)
+    m7 = np.mean(err)
+    s7 = np.std(err)
+
+    a1 = exhaust > .07
+    a2 = exhaust < .08
+    a = a1*a2
+    e8 = exhaust[a]
+    h8 = heurist[a]    
+    err = []
+    for i in range(len(h8)):
+        x = (e8[i]-h8[i])/e8[i]
+        err.append(x)
+    m8 = np.mean(err)
+    s8 = np.std(err)
+
+    a1 = exhaust > .08
+    a2 = exhaust < .09
+    a = a1*a2
+    e9 = exhaust[a]
+    h9 = heurist[a]    
+    err = []
+    for i in range(len(h9)):
+        x = (e9[i]-h9[i])/e9[i]
+        err.append(x)
+    m9 = np.mean(err)
+    s9 = np.std(err)
+    
+    a1 = exhaust > .09
+    a2 = exhaust < .1
+    a = a1*a2
+    e10 = exhaust[a]
+    h10 = heurist[a]    
+    err = []
+    for i in range(len(h10)):
+        x = (e10[i]-h10[i])/e10[i]
+        err.append(x)
+    m10 = np.mean(err)
+    s10 = np.std(err)
+
+    values = [.005, .015, .025, .035, .045, .055, .065, .075, .085, .095]
+    means = [m1, m2, m3, m4, m5, m6, m7, m8, m9, m10]
+    stanD = [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10]
+
+    plt.errorbar(values, means, stanD)
+
+    print("Note: the size of the error bars represents the standard deviation, but the bars are centered around the median on the graph. There aren't any negative errors even if the bars show it")
+
+    plt.show()
+
+    return
+
+def compareHeuristics(exhaustFile, heurist1File, heurist2File):
+    eGene, eArch, eData = readResult(exhaustFile)
+    h1Gene, h1Arch, h1Data = readResult(heurist1File)
+    h2Gene, h2Arch, h2Data = readResult(heurist2File)
+
+    exhaust = eData.flatten()
+    heurist1 = h1Data.flatten()
+    heurist2 = h2Data.flatten()
+
+    a = exhaust<.05
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+    m11 = np.mean(err1)
+    s11 = np.std(err1)
+    m21 = np.mean(err2)
+    s21 = np.std(err2)
+    
+
+    a1 = exhaust > .05
+    a2 = exhaust < .1
+    a = a1*a2
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+    m12 = np.mean(err1)
+    s12 = np.std(err1)
+    m22 = np.mean(err2)
+    s22 = np.std(err2)
+
+    a1 = exhaust > .1
+    a2 = exhaust < .15
+    a = a1*a2
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+    m13 = np.mean(err1)
+    s13 = np.std(err1)
+    m23 = np.mean(err2)
+    s23 = np.std(err2)
+
+    a1 = exhaust > .15
+    a2 = exhaust < .2
+    a = a1*a2
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+    m14 = np.mean(err1)
+    s14 = np.std(err1)
+    m24 = np.mean(err2)
+    s24 = np.std(err2)
+
+    a1 = exhaust > .4
+    a2 = exhaust < .45
+    a = a1*a2
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+    m15 = np.mean(err1)
+    s15 = np.std(err1)
+    m25 = np.mean(err2)
+    s25 = np.std(err2)
+
+    a1 = exhaust > .45
+    a2 = exhaust < .5
+    a = a1*a2
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+    m16 = np.mean(err1)
+    s16 = np.std(err1)
+    m26 = np.mean(err2)
+    s26 = np.std(err2)
+    
+    a1 = exhaust > .5
+    a2 = exhaust < .55
+    a = a1*a2
+    e = exhaust[a]
+    h1 = heurist1[a]
+    h2 = heurist2[a]
+    err1 = []
+    err2 = []
+    for i in range(len(e)):
+        x = (e[i]-h1[i])/e[i]
+        err1.append(x)
+        x = (e[i]-h2[i])/e[i]
+        err2.append(x)
+    m17 = np.mean(err1)
+    s17 = np.std(err1)
+    m27 = np.mean(err2)
+    s27 = np.std(err2)
+
+    values = [.025, .075, .125, .175, .425, .475, .525]
+    means1 = [m11, m12, m13, m14, m15, m16, m17]
+    stanD1 = [s11, s12, s13, s14, s15, s16, s17]
+    means2 = [m21, m22, m23, m24, m25, m26, m27]
+    stanD2 = [m21, m22, m23, m24, m25, m26, m27]
+    print("Note: the size of the error bars represents the standard deviation, but the bars are centered around the median on the graph. There aren't any negative errors even if the bars show it")
+    #the labels below can be edited to actually say what the heuristics are displaying
+    plt.errorbar(values, means1, stanD1, label = 'Heuristic 1')
+    plt.errorbar(values, means2, stanD2, label = 'Heuristic 2')
+    plt.legend(loc='lower right')
+    plt.show()
+    return
