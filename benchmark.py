@@ -210,6 +210,81 @@ def heuristic_fallback():
         heuristic_scores[f_name] = max(compare_scores)
     return heuristic_scores
 
+def heuristic_col():
+    ref_geometry, ref_progress_percentage, output_size = ref_data
+    g_data, _, base_data, stroke_sets, _, f_names = char_data
+    heuristic_scores = {}#[]
+    for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
+        #print(f_name)
+        strokes, p_strokes = geometry_length
+        error_maps = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
+        #if len(ref_geometry) != len(strokes):
+        #    print("skip", f_name)
+        #    continue
+        # Test through row/col
+        col_stroke_map = np.full(len(strokes), -1)
+        col_mins = np.min(error_maps, axis=0)
+        compare_scores = []
+        for col_min in range(len(ref_geometry)):
+            coords = np.argwhere(error_maps == col_mins[col_min])
+            if len(coords) > 1: # In cases where there are identical error values
+                for coord in coords:
+                    if col_stroke_map[coord[1]-1] != -1:
+                        loc = coord
+                        break
+            else:
+                loc = coords[0] # Find [row, col] index of current smallest error
+            while np.any(col_stroke_map == loc[0]): # Make sure there's no overlap
+                error_maps[loc[0]][loc[1]] = 10000
+                loc[0] = np.argmin(error_maps[:, loc[1]])
+            col_stroke_map[loc[1]] = loc[0]
+        heuristic_alignment = np.delete(col_stroke_map, np.where(col_stroke_map == -1))+1
+        heuristic_xml = minXml(ref_char, bases, stroke_set, heuristic_alignment)
+        heuristic_score = getXmlScore(heuristic_xml)
+        heuristic_scores[f_name] = heuristic_score
+    return heuristic_scores
+
+def heuristic_small():
+    ref_geometry, ref_progress_percentage, output_size = ref_data
+    g_data, _, base_data, stroke_sets, _, f_names = char_data
+    heuristic_scores = {}
+    for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
+        strokes, p_strokes = geometry_length
+        error_maps = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
+        #np.fromiter(, dtype=tuple)
+        least = 10000
+        stroke_map = ()
+        
+        # n = len(ref_geometry)
+        # perms = np.empty((np.math.factorial(n), n), dtype=np.uint8, order='F')
+        # perms[0, 0] = 0
+    
+        # rows_to_copy = 1
+        # for i in range(1, n):
+        #     perms[:rows_to_copy, i] = i
+        #     for j in range(1, i + 1):
+        #         start_row = rows_to_copy * j
+        #         end_row = rows_to_copy * (j + 1)
+        #         splitter = i - j
+        #         perms[start_row: end_row, splitter] = i
+        #         perms[start_row: end_row, :splitter] = perms[:rows_to_copy, :splitter]  # left side
+        #         perms[start_row: end_row, splitter + 1:i + 1] = perms[:rows_to_copy, splitter:i]  # right side
+    
+        #     rows_to_copy *= i + 1
+            
+        for priority in permutations(range(0, len(ref_geometry))):
+            #print(np.take(error_maps, priority, axis=1))
+            s = np.sum(error_maps[np.arange(len(error_maps)), priority])
+            if s < least:
+                least = s
+                stroke_map = priority
+        heuristic_xml = minXml(ref_char, bases, stroke_set, np.argsort(stroke_map)+1)
+        heuristic_score = getXmlScore(heuristic_xml)
+        heuristic_scores[f_name] = heuristic_score
+    return heuristic_scores
+
+###
+
 def run_benchmarks(funcs, trials):
     benchmarks = []
     for f in funcs:
@@ -258,15 +333,20 @@ while True:
     greedy_wins = 0
     heuristic_wins = 0
     heuristic_fallback_wins = 0
+    heuristic_col_wins = 0
+    heuristic_small_wins = 0
+    total = 0
     excl_exhaustive = input("Exclude exhaustive (T/F)? ")
     if excl_exhaustive.lower() == "t":
-        benchmarks = run_benchmarks([greedy, heuristic, heuristic_fallback], trials)
+        benchmarks = run_benchmarks([greedy, heuristic, heuristic_fallback, heuristic_col, heuristic_small], trials)
         greedy_scores = benchmarks[0][1]
         heuristic_scores = benchmarks[1][1]
         heuristic_fallback_scores = benchmarks[2][1]
+        heuristic_col_scores = benchmarks[3][1]
+        heuristic_small_scores = benchmarks[4][1]
         for f_name in char_data[5]:
             try:
-                best_score = max(greedy_scores[f_name], heuristic_scores[f_name], heuristic_fallback_scores[f_name])
+                best_score = max(greedy_scores[f_name], heuristic_scores[f_name], heuristic_fallback_scores[f_name], heuristic_col_scores[f_name], heuristic_small_scores[f_name])
             except:
                 continue
             if best_score == greedy_scores[f_name]:
@@ -275,14 +355,22 @@ while True:
                 heuristic_wins += 1
             if best_score == heuristic_fallback_scores[f_name]:
                 heuristic_fallback_wins += 1
-            check = min(len(greedy_scores), len(heuristic_scores), len(heuristic_fallback_scores))
+            if best_score == heuristic_col_scores[f_name]:
+                heuristic_col_wins += 1
+            if best_score == heuristic_small_scores[f_name]:
+                heuristic_small_wins += 1
+            check = min(len(greedy_scores), len(heuristic_scores), len(heuristic_fallback_scores), len(heuristic_col_scores), len(heuristic_small_scores))
             if check == len(greedy_scores):
                 total = len(greedy_scores)
             elif check == len(heuristic_scores):
                 total = len(heuristic_scores)
             elif check == len(heuristic_fallback_scores):
                 total = len(heuristic_fallback_scores)
-        format_benchmarks([greedy, heuristic, heuristic_fallback], benchmarks, [greedy_wins, heuristic_wins, heuristic_fallback_wins], total, int(trials))
+            elif check == len(heuristic_col_scores):
+                total = len(heuristic_col_scores)
+            elif check == len(heuristic_small_scores):
+                total = len(heuristic_small_scores)
+        format_benchmarks([greedy, heuristic, heuristic_fallback, heuristic_col, heuristic_small], benchmarks, [greedy_wins, heuristic_wins, heuristic_fallback_wins, heuristic_col_wins, heuristic_small_wins], total, int(trials))
     else:
         exhaustive_wins = 0
         benchmarks = run_benchmarks([exhaustive, greedy, heuristic, heuristic_fallback], trials)
@@ -305,7 +393,7 @@ while True:
                 heuristic_fallback_wins += 1
             check = min(len(exhaustive_scores), len(greedy_scores), len(heuristic_scores), len(heuristic_fallback_scores))
             if check == len(exhaustive_scores):
-                total = len
+                total = len(exhaustive_scores)
             elif check == len(greedy_scores):
                 total = len(greedy_scores)
             elif check == len(heuristic_scores):
