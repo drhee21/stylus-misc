@@ -19,35 +19,49 @@ Exhaustive search
 def exhaustive():
     ref_geometry, ref_progress_percentage, output_size = ref_data
     g_data, han_chars, base_data, stroke_sets, _, f_names = char_data
+
+    exhaust_scores = {}
+    for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
+        exhaust_maxes = []
+        exhaustive_alignments = permutations(range(1, len(ref_geometry)+1))
+        exhaustive_scores = np.zeros(factorial(len(ref_geometry)))
+        for j, p in enumerate(exhaustive_alignments):
+            p_xml = minXml(ref_char, bases, stroke_set, p)
+            exhaustive_scores[j] = getXmlScore(p_xml)
+        exhaust_maxes.append(exhaustive_scores.max())
+        exhaust_scores[f_name] = np.max(exhaust_maxes)
+    return exhaust_scores
+"""
+def exhaustive():
+    ref_geometry, ref_progress_percentage, output_size = ref_data
+    g_data, han_chars, base_data, stroke_sets, _, f_names = char_data
     
     # Edited from exhaustive.py
     def computeExhaustive(ref_char, f_read, data_dir, exhaust_dir = "Exhaustive", prog_interval = 100, save = True, xml_dir = "GenXml/Exhaustive", save_file = ""):
         n_strokes = len(ref_geometry)
+        exhaustive_scores = np.zeros(factorial(n_strokes))
+        exhaust_maxes = []
         for i in range(len(g_data)):
             #print(f"Generating exhaustive scores for sample {f_read[i]}")
             bases = base_data[i]
             stroke_set = stroke_sets[i]
             exhaustive_alignments = permutations(range(1, n_strokes+1))
-            exhaustive_scores = np.zeros(factorial(n_strokes))
             for j, p in enumerate(exhaustive_alignments):
                 p_xml = minXml(ref_char, bases, stroke_set, p)
                 exhaustive_scores[j] = getXmlScore(p_xml)
                 #exhaustive_scores[j] = getXmlScore(p_xml, False, False)
                 #if j%prog_interval == 0:
                 #    print(f"Scoring permutation {j} of {len(exhaustive_scores)}")
-            yield exhaustive_scores
+            exhaust_maxes.append(exhaustive_scores.max())
+        return np.max(exhaust_maxes)
             
-    exhaustive_scores = {}
-    for (gl, han_char, bases, f_name) in zip(g_data, han_chars, base_data, f_names):
-        g, l = gl
-        exhaust_maxes = []
-        for e in computeExhaustive(ref_char, [f_name], data_dir, save = False, xml_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/GenXml/Exhaustive'):
-            exhaust_maxes.append(e.max())
-        original_score = np.max(exhaust_maxes)
-        exhaustive_scores[f_name] = original_score
+    exhaust_scores = {}
+    for (e, f_name) in zip(, f_names):
+        computeExhaustive(ref_char, f_names, data_dir, save = False)
+        exhaust_scores[f_name] = e
         #exhaustive_scores.append(original_score)
-    return exhaustive_scores
-    
+    return exhaust_scores
+    """
 """
 Holiday's original greedy algorithm
 """
@@ -70,7 +84,7 @@ First heuristic algorithm: O(n^2)
 
 Methodology: Iterate over rows and columns of the error matrix and build a stroke order for each based on the smallest error
 """
-def heuristic():
+def first_heuristic():
     ref_geometry, ref_progress_percentage, output_size = ref_data
     g_data, _, base_data, stroke_sets, _, f_names = char_data
     heuristic_scores = {}#[]
@@ -258,7 +272,7 @@ Second heuristic algorithm: O(n!)
 
 Methodology: Sum the error of every possible row permutation and choose the stroke order with the smallest total error
 """
-def heuristic_total():
+def second_heuristic():
     ref_geometry, ref_progress_percentage, output_size = ref_data
     g_data, _, base_data, stroke_sets, _, f_names = char_data
     heuristic_scores = {}
@@ -301,7 +315,7 @@ Third heuristic algorithm: O(n!)
 
 Methodology: Get the number of smallest errors present for every possible row permutation and choose the stroke order with the highest number of smallest errors
 """
-def heuristic_small():
+def third_heuristic():
     ref_geometry, ref_progress_percentage, output_size = ref_data
     g_data, _, base_data, stroke_sets, _, f_names = char_data
     heuristic_scores = {}
@@ -343,7 +357,7 @@ def heuristic_comb():
         smallerr_count = 0
         least=10000
         stroke_map=()
-        for priority in permutations(range(0, len(ref_geometry))): # Combine heuristic_small and heuristic_total
+        for priority in permutations(range(0, len(ref_geometry))): # Combine third_heuristic and second_heuristic
             check=error_maps[np.arange(len(error_maps)), priority]
             c = np.count_nonzero(smallerrs == check)#error_maps[np.arange(len(error_maps)), priority])
             if c > smallerr_count:
@@ -367,9 +381,9 @@ def heuristic_comb():
 """
 Fourth heuristic algorithm (not optimized but currently has the worst time complexity)
 
-Methodology: Populate multiple stroke maps with the smallest errors without conflict as constants
+Methodology: Populate multiple stroke maps with the smallest errors without conflict as constants (similar to divide and conquer)
 """
-def heuristic_e():
+def fourth_heuristic():
     ref_geometry, ref_progress_percentage, output_size = ref_data
     g_data, _, base_data, stroke_sets, _, f_names = char_data
     heuristic_scores = {}
@@ -407,6 +421,40 @@ def heuristic_e():
                 final_map[final_map == -1] = missing_perm
                 stroke_maps.append(final_map)
         compare_scores = []
+        for m in stroke_maps:
+            heuristic_xml = minXml(ref_char, bases, stroke_set, m+1)
+            heuristic_score = getXmlScore(heuristic_xml)
+            compare_scores.append(heuristic_score)
+        heuristic_scores[f_name] = max(compare_scores)
+    return heuristic_scores
+
+"""
+Optimizing the third heuristic algorithm
+Knowing the highest amount of smallest errors that can be in a stroke map and only permuting those possibilities by eliminating 
+In a six stroke map with two identical numbers there can only be five
+With three identical there can only be four
+"""
+
+def third_heuristic2():
+    ref_geometry, ref_progress_percentage, output_size = ref_data
+    g_data, _, base_data, stroke_sets, _, f_names = char_data
+    heuristic_scores = {}
+    for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
+        strokes, p_strokes = geometry_length
+        error_maps = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
+        compare_scores = []
+        stroke_maps = []#np.empty(20)
+        np.bincount()
+        smallerrs = np.min(error_maps, axis=1) # Get the smallest error for every row
+        smallerr_count = len(ref)-np.sum(counts2[counts2>1]-1)
+        for priority in permutations(range(0, len(ref_geometry))): # Loop over every possible stroke priority
+            c = np.count_nonzero(smallerrs == error_maps[np.arange(len(error_maps)), priority]) # Get the number of elements from smallerrs present in this stroke priority
+            if c > smallerr_count:
+                smallerr_count = c
+                stroke_maps.clear()
+                stroke_maps.append(np.argsort(priority))
+            elif c == smallerr_count: # In the event this priority has the same number of smallerrs as the current lowest it should be added to the test sample
+                stroke_maps.append(np.argsort(priority))
         for m in stroke_maps:
             heuristic_xml = minXml(ref_char, bases, stroke_set, m+1)
             heuristic_score = getXmlScore(heuristic_xml)
@@ -462,77 +510,77 @@ while True:
     trials = input("Enter number of trials: ")
     exhaustive_wins = 0
     greedy_wins = 0
-    heuristic_wins = 0
-    heuristic_fallback_wins = 0
-    heuristic_col_wins = 0
-    heuristic_total_wins = 0
-    heuristic_small_wins = 0
-    heuristic_comb_wins = 0
-    heuristic_e_wins = 0
+    first_heuristic_wins = 0
+    #heuristic_fallback_wins = 0
+    #heuristic_col_wins = 0
+    second_heuristic_wins = 0
+    third_heuristic_wins = 0
+    #heuristic_comb_wins = 0
+    fourth_heuristic_wins = 0
     total = 0
     excl_exhaustive = input("Exclude exhaustive (T/F)? ")
-    to_run = [exhaustive, greedy, heuristic, heuristic_fallback, heuristic_col, heuristic_total, heuristic_small, heuristic_comb, heuristic_e]
+    to_run = [exhaustive, greedy, first_heuristic, second_heuristic, third_heuristic, fourth_heuristic]#heuristic_fallback, heuristic_col, heuristic_comb, 
     if excl_exhaustive.lower() == "t":
         to_run.remove(exhaustive)
     benchmarks = run_benchmarks(to_run, trials)
     exhaustive_scores = {}
     if excl_exhaustive.lower() == "f":
-        exhaustive_scores = benchmarks[0][1]
+        exhaustive_scores = benchmarks[to_run.index(exhaustive)][1]
     greedy_scores = benchmarks[to_run.index(greedy)][1]
-    heuristic_scores = benchmarks[to_run.index(heuristic)][1]
-    heuristic_fallback_scores = benchmarks[to_run.index(heuristic_fallback)][1]
-    heuristic_col_scores = benchmarks[to_run.index(heuristic_col)][1]
-    heuristic_total_scores = benchmarks[to_run.index(heuristic_total)][1]
-    heuristic_small_scores = benchmarks[to_run.index(heuristic_small)][1]
-    heuristic_comb_scores = benchmarks[to_run.index(heuristic_comb)][1]
-    heuristic_e_scores = benchmarks[to_run.index(heuristic_e)][1]
+    first_heuristic_scores = benchmarks[to_run.index(first_heuristic)][1]
+    #heuristic_fallback_scores = benchmarks[to_run.index(heuristic_fallback)][1]
+    #heuristic_col_scores = benchmarks[to_run.index(heuristic_col)][1]
+    second_heuristic_scores = benchmarks[to_run.index(second_heuristic)][1]
+    third_heuristic_scores = benchmarks[to_run.index(third_heuristic)][1]
+    #heuristic_comb_scores = benchmarks[to_run.index(heuristic_comb)][1]
+    fourth_heuristic_scores = benchmarks[to_run.index(fourth_heuristic)][1]
     for f_name in char_data[5]:
-        f_score = [greedy_scores[f_name], heuristic_scores[f_name], heuristic_fallback_scores[f_name], heuristic_col_scores[f_name], heuristic_total_scores[f_name], heuristic_small_scores[f_name], heuristic_comb_scores[f_name], heuristic_e_scores[f_name]]
+        f_score = [greedy_scores[f_name], first_heuristic_scores[f_name], second_heuristic_scores[f_name], third_heuristic_scores[f_name], fourth_heuristic_scores[f_name]]#heuristic_fallback_scores[f_name], heuristic_col_scores[f_name], , heuristic_comb_scores[f_name]
         if excl_exhaustive.lower() == "f":
-            f_score.insert(0, exhaustive_scores)
+            f_score.insert(0, exhaustive_scores[f_name])
         best_score = max(*f_score)
         if excl_exhaustive.lower() == "f":
             if best_score == exhaustive_scores[f_name]:
                 exhaustive_wins += 1
         if best_score == greedy_scores[f_name]:
             greedy_wins += 1
-        if best_score == heuristic_scores[f_name]:
-            heuristic_wins += 1
-        if best_score == heuristic_fallback_scores[f_name]:
-            heuristic_fallback_wins += 1
-        if best_score == heuristic_col_scores[f_name]:
-            heuristic_col_wins += 1
-        if best_score == heuristic_total_scores[f_name]:
-            heuristic_total_wins += 1
-        if best_score == heuristic_small_scores[f_name]:
-            heuristic_small_wins += 1
-        if best_score == heuristic_comb_scores[f_name]:
-            heuristic_comb_wins += 1
-        if best_score == heuristic_e_scores[f_name]:
-            heuristic_e_wins += 1
-        f_len = [len(greedy_scores), len(heuristic_scores), len(heuristic_fallback_scores), len(heuristic_col_scores), len(heuristic_total_scores), len(heuristic_small_scores), len(heuristic_comb_scores), len(heuristic_e_scores)]
+        if best_score == first_heuristic_scores[f_name]:
+            first_heuristic_wins += 1
+        # if best_score == heuristic_fallback_scores[f_name]:
+        #     heuristic_fallback_wins += 1
+        # if best_score == heuristic_col_scores[f_name]:
+        #     heuristic_col_wins += 1
+        if best_score == second_heuristic_scores[f_name]:
+            second_heuristic_wins += 1
+        if best_score == third_heuristic_scores[f_name]:
+            third_heuristic_wins += 1
+        # if best_score == heuristic_comb_scores[f_name]:
+        #     heuristic_comb_wins += 1
+        if best_score == fourth_heuristic_scores[f_name]:
+            fourth_heuristic_wins += 1
+        f_len = [len(greedy_scores), len(first_heuristic_scores), len(second_heuristic_scores), len(third_heuristic_scores), len(fourth_heuristic_scores)]#len(heuristic_fallback_scores), len(heuristic_col_scores),  len(heuristic_comb_scores),
         if excl_exhaustive.lower() == "f":
-            f_len.insert(0, exhaustive_scores)
+            f_len.insert(0, len(exhaustive_scores))
         check = min(*f_len)
         if check == len(exhaustive_scores):
-            total == len(exhaustive_scores)
+            total = len(exhaustive_scores)
         elif check == len(greedy_scores):
             total = len(greedy_scores)
-        elif check == len(heuristic_scores):
-            total = len(heuristic_scores)
-        elif check == len(heuristic_fallback_scores):
-            total = len(heuristic_fallback_scores)
-        elif check == len(heuristic_col_scores):
-            total = len(heuristic_col_scores)
-        elif check == len(heuristic_total_scores):
-            total = len(heuristic_total_scores)
-        elif check == len(heuristic_small_scores):
-            total = len(heuristic_small_scores)
-        elif check == len(heuristic_comb_scores):
-            total = len(heuristic_comb_scores)
-        elif check == len(heuristic_e_scores):
-            total = len(heuristic_e_scores)
-    f_wins = [greedy_wins, heuristic_wins, heuristic_fallback_wins, heuristic_col_wins, heuristic_total_wins, heuristic_small_wins, heuristic_comb_wins, heuristic_e_wins]
+        elif check == len(first_heuristic_scores):
+            total = len(first_heuristic_scores)
+        # elif check == len(heuristic_fallback_scores):
+        #     total = len(heuristic_fallback_scores)
+        # elif check == len(heuristic_col_scores):
+        #     total = len(heuristic_col_scores)
+        elif check == len(second_heuristic_scores):
+            total = len(second_heuristic_scores)
+        elif check == len(third_heuristic_scores):
+            total = len(third_heuristic_scores)
+        # elif check == len(heuristic_comb_scores):
+        #     total = len(heuristic_comb_scores)
+        elif check == len(fourth_heuristic_scores):
+            total = len(fourth_heuristic_scores)
+    f_wins = [greedy_wins, first_heuristic_wins, second_heuristic_wins, third_heuristic_wins, fourth_heuristic_wins]#heuristic_fallback_wins, heuristic_col_wins, heuristic_comb_wins, 
     if excl_exhaustive.lower() == "f":
         f_wins.insert(0, exhaustive_wins)
     format_benchmarks(to_run, benchmarks, f_wins, total, int(trials))
