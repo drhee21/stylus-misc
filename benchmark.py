@@ -31,37 +31,7 @@ def exhaustive():
         exhaust_maxes.append(exhaustive_scores.max())
         exhaust_scores[f_name] = np.max(exhaust_maxes)
     return exhaust_scores
-"""
-def exhaustive():
-    ref_geometry, ref_progress_percentage, output_size = ref_data
-    g_data, han_chars, base_data, stroke_sets, _, f_names = char_data
     
-    # Edited from exhaustive.py
-    def computeExhaustive(ref_char, f_read, data_dir, exhaust_dir = "Exhaustive", prog_interval = 100, save = True, xml_dir = "GenXml/Exhaustive", save_file = ""):
-        n_strokes = len(ref_geometry)
-        exhaustive_scores = np.zeros(factorial(n_strokes))
-        exhaust_maxes = []
-        for i in range(len(g_data)):
-            #print(f"Generating exhaustive scores for sample {f_read[i]}")
-            bases = base_data[i]
-            stroke_set = stroke_sets[i]
-            exhaustive_alignments = permutations(range(1, n_strokes+1))
-            for j, p in enumerate(exhaustive_alignments):
-                p_xml = minXml(ref_char, bases, stroke_set, p)
-                exhaustive_scores[j] = getXmlScore(p_xml)
-                #exhaustive_scores[j] = getXmlScore(p_xml, False, False)
-                #if j%prog_interval == 0:
-                #    print(f"Scoring permutation {j} of {len(exhaustive_scores)}")
-            exhaust_maxes.append(exhaustive_scores.max())
-        return np.max(exhaust_maxes)
-            
-    exhaust_scores = {}
-    for (e, f_name) in zip(, f_names):
-        computeExhaustive(ref_char, f_names, data_dir, save = False)
-        exhaust_scores[f_name] = e
-        #exhaustive_scores.append(original_score)
-    return exhaust_scores
-    """
 """
 Holiday's original greedy algorithm
 """
