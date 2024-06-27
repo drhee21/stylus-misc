@@ -400,11 +400,7 @@ def fourth_heuristic():
 
 """
 Optimizing the third heuristic algorithm
-Knowing the highest amount of smallest errors that can be in a stroke map and only permuting those possibilities by eliminating 
-In a six stroke map with two identical numbers there can only be five
-With three identical there can only be four
 """
-
 def third_heuristic2():
     ref_geometry, ref_progress_percentage, output_size = ref_data
     g_data, _, base_data, stroke_sets, _, f_names = char_data
@@ -427,6 +423,48 @@ def third_heuristic2():
                 stroke_maps.append(np.argsort(priority))
         for m in stroke_maps:
             heuristic_xml = minXml(ref_char, bases, stroke_set, m+1)
+            heuristic_score = getXmlScore(heuristic_xml)
+            compare_scores.append(heuristic_score)
+        heuristic_scores[f_name] = max(compare_scores)
+    return heuristic_scores
+
+"""
+Exhausting every viable possibility of the stroke matrix. In theory this is the best that the stroke error functions can do in terms of accuracy.
+There's still some way to go as this does not measure up to the exhaustive search (based on testing six stroke genes with various six stroke 
+archetypes), meaning that a potential focus for future work could be tuning the stroke error functions.
+"""
+def dyn():
+    ref, p_ref, _ = ref_data
+    g_data, _, base_data, stroke_sets, _, f_names = char_data
+    heuristic_scores = {}
+    for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
+        stroke_priority = permutations(range(0, len(ref)))
+        compare_scores = []
+        strokes, p_strokes = geometry_length
+        b = 0
+        stroke_maps = np.empty((0, len(ref)), int)
+        #j = 0
+        # Find candidate stroke orders
+        #fromiter() = [(), (), (), etc.] then get indexes at values for each priority
+        for priority in stroke_priority:
+            error_maps = strokeErrorMatrix(strokes, ref, p_strokes, p_ref)
+            stroke_map = np.full(len(strokes), -1)
+            for i in priority:
+                smallerror = np.argmin(error_maps[i]) # retrieve index of smallest error for current archetype stroke
+                while(stroke_map[smallerror]!=-1):
+                    # change small error so that we do not repeat over indexes that are already taken
+                    # just keeps repeating until we land on an index that doesn't already have a value in its place
+                    error_maps[i][smallerror] = 10000
+                    smallerror = np.argmin(error_maps[i])
+                stroke_map[smallerror] = i
+            stroke_map = stroke_map[stroke_map!=-1]
+            if not np.any(np.all(stroke_map == stroke_maps, axis=1)):
+                #stroke_maps[j] = stroke_map
+                stroke_maps = np.append(stroke_maps, np.array([stroke_map]), axis=0)
+                #j += 1
+        # Retrieve scores for each candidate stroke order
+        for s in stroke_maps:
+            heuristic_xml = minXml(ref_char, bases, stroke_set, s+1)
             heuristic_score = getXmlScore(heuristic_xml)
             compare_scores.append(heuristic_score)
         heuristic_scores[f_name] = max(compare_scores)
@@ -487,6 +525,7 @@ while True:
     third_heuristic_wins = 0
     #heuristic_comb_wins = 0
     fourth_heuristic_wins = 0
+    #dyn_wins = 0
     total = 0
     excl_exhaustive = input("Exclude exhaustive (T/F)? ")
     to_run = [exhaustive, greedy, first_heuristic, second_heuristic, third_heuristic, fourth_heuristic]#heuristic_fallback, heuristic_col, heuristic_comb, 
@@ -504,6 +543,7 @@ while True:
     third_heuristic_scores = benchmarks[to_run.index(third_heuristic)][1]
     #heuristic_comb_scores = benchmarks[to_run.index(heuristic_comb)][1]
     fourth_heuristic_scores = benchmarks[to_run.index(fourth_heuristic)][1]
+    #dyn_scores = benchmarks[to_run.index(dyn)][1]
     for f_name in char_data[5]:
         f_score = [greedy_scores[f_name], first_heuristic_scores[f_name], second_heuristic_scores[f_name], third_heuristic_scores[f_name], fourth_heuristic_scores[f_name]]#heuristic_fallback_scores[f_name], heuristic_col_scores[f_name], , heuristic_comb_scores[f_name]
         if excl_exhaustive.lower() == "f":
@@ -528,6 +568,8 @@ while True:
         #     heuristic_comb_wins += 1
         if best_score == fourth_heuristic_scores[f_name]:
             fourth_heuristic_wins += 1
+        # if best_score == dyn_scores[f_name]:
+        #     dyn_wins += 1
         f_len = [len(greedy_scores), len(first_heuristic_scores), len(second_heuristic_scores), len(third_heuristic_scores), len(fourth_heuristic_scores)]#len(heuristic_fallback_scores), len(heuristic_col_scores),  len(heuristic_comb_scores),
         if excl_exhaustive.lower() == "f":
             f_len.insert(0, len(exhaustive_scores))
@@ -550,6 +592,8 @@ while True:
         #     total = len(heuristic_comb_scores)
         elif check == len(fourth_heuristic_scores):
             total = len(fourth_heuristic_scores)
+        # elif check == len(dyn_scores):
+        #     total = len(dyn_scores)
     f_wins = [greedy_wins, first_heuristic_wins, second_heuristic_wins, third_heuristic_wins, fourth_heuristic_wins]#heuristic_fallback_wins, heuristic_col_wins, heuristic_comb_wins, 
     if excl_exhaustive.lower() == "f":
         f_wins.insert(0, exhaustive_wins)
