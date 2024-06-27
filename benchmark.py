@@ -349,7 +349,8 @@ def heuristic_comb():
     return heuristic_scores
 
 """
-Fourth heuristic algorithm (not optimized but currently has the worst time complexity)
+Fourth heuristic algorithm (not optimized yet but generally scales better with larger stroke counts, still varies depending on
+archetype)
 
 Methodology: Populate multiple stroke maps with the smallest errors without conflict as constants (similar to divide and conquer)
 """
@@ -399,7 +400,7 @@ def fourth_heuristic():
     return heuristic_scores
 
 """
-Optimizing the third heuristic algorithm
+Optimizing the third heuristic algorithm (WIP)
 """
 def third_heuristic2():
     ref_geometry, ref_progress_percentage, output_size = ref_data
@@ -410,7 +411,7 @@ def third_heuristic2():
         error_maps = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
         compare_scores = []
         stroke_maps = []#np.empty(20)
-        np.bincount()
+        #np.bincount()
         smallerrs = np.min(error_maps, axis=1) # Get the smallest error for every row
         smallerr_count = len(ref)-np.sum(counts2[counts2>1]-1)
         for priority in permutations(range(0, len(ref_geometry))): # Loop over every possible stroke priority
@@ -430,8 +431,10 @@ def third_heuristic2():
 
 """
 Exhausting every viable possibility of the stroke matrix. In theory this is the best that the stroke error functions can do in terms of accuracy.
-There's still some way to go as this does not measure up to the exhaustive search (based on testing six stroke genes with various six stroke 
-archetypes), meaning that a potential focus for future work could be tuning the stroke error functions.
+There's still some way to go as this does not measure up to the exhaustive search (usually gets around 50% of exhaustive scores based on testing 
+six stroke genes with various six stroke archetypes), meaning that a potential focus for future work could be tuning the stroke error functions.
+
+Either that or if profs are satisfied with this level of accuracy then finding a way to optimize this function heavily could be good.
 """
 def dyn():
     ref, p_ref, _ = ref_data
@@ -494,7 +497,7 @@ def format_benchmarks(funcs, benchmarks, wins, total, trials):
         print(f"{f.__name__} scored {w} out of {total} genes accurately.")
 
 ref_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/Reference' # archetype directory
-data_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/NewGenes' # gene directory
+data_dir = "genes"#f'{str(Path.home())}/Stylus_Scoring_Generalization/NewGenes' # gene directory
 
 timeit.template = """
 def inner(_it, _timer{init}):
