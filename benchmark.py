@@ -349,8 +349,9 @@ def heuristic_comb():
     return heuristic_scores
 
 """
-Fourth heuristic algorithm (not optimized yet but generally scales better with larger stroke counts, still varies depending on
-archetype)
+Fourth heuristic algorithm: O(n^2)
+
+Not optimized yet but generally scales better with larger stroke counts (still varies depending on archetype) and is less performant in real time due to potentially having more stroke arrangements to score.
 
 Methodology: Populate multiple stroke maps with the smallest errors without conflict as constants
 """
