@@ -349,10 +349,11 @@ def heuristic_comb():
     return heuristic_scores
 
 """
-Fourth heuristic algorithm (not optimized yet but generally scales better with larger stroke counts, still varies depending on
-archetype)
+Fourth heuristic algorithm: O(n^2)
 
-Methodology: Populate multiple stroke maps with the smallest errors without conflict as constants (similar to divide and conquer)
+Not optimized yet but generally scales better with larger stroke counts (still varies depending on archetype) and is less performant in real time due to potentially having more stroke arrangements to score.
+
+Methodology: Populate multiple stroke maps with the smallest errors without conflict as constants
 """
 def fourth_heuristic():
     ref_geometry, ref_progress_percentage, output_size = ref_data
@@ -431,10 +432,12 @@ def third_heuristic2():
 
 """
 Exhausting every viable possibility of the stroke matrix. In theory this is the best that the stroke error functions can do in terms of accuracy.
-There's still some way to go as this does not measure up to the exhaustive search (usually gets around 50% of exhaustive scores based on testing 
-six stroke genes with various six stroke archetypes), meaning that a potential focus for future work could be tuning the stroke error functions.
+There's still some way to go as this does not measure up to the exhaustive search (usually gets around 50% of exhaustive scores compared to 33%ish
+from third/fourth heuristics, based on testing six stroke genes with various six stroke archetypes), meaning that a potential focus for future 
+work could be tuning the stroke error functions.
 
-Either that or if profs are satisfied with this level of accuracy then finding a way to optimize this function heavily could be good.
+Either that or if profs are satisfied with this level of accuracy then finding a way to optimize this function (vectorizing those nested loops)
+heavily could be good.
 """
 def dyn():
     ref, p_ref, _ = ref_data
