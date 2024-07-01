@@ -369,14 +369,14 @@ def fourth_heuristic():
         counts = np.bincount(smallerrs)
         u = counts.nonzero()[0]
         c = counts[u]
-        extraneous = np.argwhere(u >= len(ref_geometry)).flatten()
+        extraneous = np.argwhere(u >= len(ref_geometry)).flatten() # in case of marks, remove extraneous strokes
         u = np.delete(u, extraneous)
         c = np.delete(c, extraneous)
-        const_indices = u[np.argwhere(c == 1).flatten()]
+        const_indices = u[np.argwhere(c == 1).flatten()] # find indices of non-overlapping stroke pairings, then set them as constants in base stroke map
         sorter = np.argsort(smallerrs)
         const_vals = sorter[np.searchsorted(smallerrs, const_indices, sorter=sorter)]
         base_stroke_map[const_indices] = const_vals
-        perm_indices = u[np.argwhere(c > 1).flatten()]
+        perm_indices = u[np.argwhere(c > 1).flatten()] # find indices of overlapping stroke pairings
         conflicts = dict(zip(perm_indices, (np.argwhere(smallerrs == perm_index).flatten() for perm_index in perm_indices))) # a dict of conflicting smallest error indexes. the indexes of the potential stroke mapping are the keys and the potential values are the array value
         # = item for item, count in Counter(smallerrs).items() if count > 1
         perm_list = []
@@ -502,7 +502,7 @@ def format_benchmarks(funcs, benchmarks, wins, total, trials):
         print(f"{f.__name__} scored {w} out of {total} genes accurately.")
 
 ref_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/Reference' # archetype directory
-data_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/NewGenes' # gene directory
+data_dir = "genes"#f'{str(Path.home())}/Stylus_Scoring_Generalization/NewGenes' # gene directory
 
 timeit.template = """
 def inner(_it, _timer{init}):
