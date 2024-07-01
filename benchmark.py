@@ -351,7 +351,7 @@ def heuristic_comb():
 """
 Fourth heuristic algorithm: O(n^2)
 
-Not optimized yet but generally scales better with larger stroke counts (still varies depending on archetype) and is less performant in real time due to potentially having more stroke arrangements to score.
+Not fully optimized yet but generally scales better with larger stroke counts (still varies depending on archetype) and is less performant in real time due to potentially having more stroke arrangements to score.
 
 Methodology: Populate multiple stroke maps with the smallest errors without conflict as constants
 """
@@ -362,21 +362,23 @@ def fourth_heuristic():
     for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
         strokes, p_strokes = geometry_length
         error_maps = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
-        smallerrs = np.empty(len(ref_geometry), dtype=int)
-        mins = np.min(error_maps, axis=1)
-        for (i, v) in enumerate(mins):
-            smallerrs[i] = np.argwhere(error_maps == v)[0][1] 
-        conflicts = {} # a dict of conflicting smallest error indexes. the indexes of the potential stroke mapping are the keys and the potential values are the array value
+        smallerrs = np.argmin(error_maps, axis=1) #[stroke matrix row]=stroke matrix col
         stroke_maps = []
         base_stroke_map = np.full(len(ref_geometry), -1, dtype=int)#np.empty(len(ref), dtype=int)#
-        for num in range(len(ref_geometry)):
-            locs = np.argwhere(smallerrs == num).flatten()
-            if len(locs) == 1: # if there isn't any conflict with another stroke error make this index constant
-                base_stroke_map[num] = locs[0]
-                continue
-            elif len(locs) == 0: # if the stroke mapping index isn't found it will be filled in last
-                continue
-            conflicts[num] = locs
+        #u, c = np.unique(smallerrs, return_counts=True)
+        counts = np.bincount(smallerrs)
+        u = counts.nonzero()[0]
+        c = counts[u]
+        extraneous = np.argwhere(u >= len(ref_geometry)).flatten()
+        u = np.delete(u, extraneous)
+        c = np.delete(c, extraneous)
+        const_indices = u[np.argwhere(c == 1).flatten()]
+        sorter = np.argsort(smallerrs)
+        const_vals = sorter[np.searchsorted(smallerrs, const_indices, sorter=sorter)]
+        base_stroke_map[const_indices] = const_vals
+        perm_indices = u[np.argwhere(c > 1).flatten()]
+        conflicts = dict(zip(perm_indices, (np.argwhere(smallerrs == perm_index).flatten() for perm_index in perm_indices))) # a dict of conflicting smallest error indexes. the indexes of the potential stroke mapping are the keys and the potential values are the array value
+        # = item for item, count in Counter(smallerrs).items() if count > 1
         perm_list = []
         for p in conflicts.values():
             perm_list.append(permutations(p))
@@ -500,7 +502,7 @@ def format_benchmarks(funcs, benchmarks, wins, total, trials):
         print(f"{f.__name__} scored {w} out of {total} genes accurately.")
 
 ref_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/Reference' # archetype directory
-data_dir = "genes"#f'{str(Path.home())}/Stylus_Scoring_Generalization/NewGenes' # gene directory
+data_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/NewGenes' # gene directory
 
 timeit.template = """
 def inner(_it, _timer{init}):
