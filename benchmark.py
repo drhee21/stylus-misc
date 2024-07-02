@@ -1,7 +1,7 @@
-from itertools import permutations, product
 from math import factorial
 from pathlib import Path
 
+import itertools
 import os
 import timeit
 
@@ -23,7 +23,7 @@ def exhaustive():
     exhaust_scores = {}
     for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
         exhaust_maxes = []
-        exhaustive_alignments = permutations(range(1, len(ref_geometry)+1))
+        exhaustive_alignments = itertools.permutations(range(1, len(ref_geometry)+1))
         exhaustive_scores = np.zeros(factorial(len(ref_geometry)))
         for j, p in enumerate(exhaustive_alignments):
             p_xml = minXml(ref_char, bases, stroke_set, p)
@@ -269,7 +269,7 @@ def second_heuristic():
         #         perms[start_row: end_row, splitter + 1:i + 1] = perms[:rows_to_copy, splitter:i]  # right side
     
         #     rows_to_copy *= i + 1
-        for priority in permutations(range(0, len(ref_geometry))): # Loop over every possible stroke priority
+        for priority in itertools.permutations(range(0, len(ref_geometry))): # Loop over every possible stroke priority
             #print(np.take(error_maps, priority, axis=1))
             s = np.sum(error_maps[np.arange(len(error_maps)), priority]) # Find the sum of the errors in this stroke priority
             if s < least: # Set stroke map if it has the smallest total error
@@ -296,7 +296,7 @@ def third_heuristic():
         stroke_maps = []#np.empty(20)
         smallerrs = np.min(error_maps, axis=1) # Get the smallest error for every row
         smallerr_count = 0
-        for priority in permutations(range(0, len(ref_geometry))): # Loop over every possible stroke priority
+        for priority in itertools.permutations(range(0, len(ref_geometry))): # Loop over every possible stroke priority
             c = np.count_nonzero(smallerrs == error_maps[np.arange(len(error_maps)), priority]) # Get the number of elements from smallerrs present in this stroke priority
             if c > smallerr_count: # In the event that this priority has a larger number of smallerrs than the current lowest it should restart the test sample beginning with itself
                 smallerr_count = c
@@ -327,7 +327,7 @@ def heuristic_comb():
         smallerr_count = 0
         least=10000
         stroke_map=()
-        for priority in permutations(range(0, len(ref_geometry))): # Combine third_heuristic and second_heuristic
+        for priority in itertools.permutations(range(0, len(ref_geometry))): # Combine third_heuristic and second_heuristic
             check=error_maps[np.arange(len(error_maps)), priority]
             c = np.count_nonzero(smallerrs == check)#error_maps[np.arange(len(error_maps)), priority])
             if c > smallerr_count:
@@ -351,7 +351,7 @@ def heuristic_comb():
 """
 Fourth heuristic algorithm: O(n^2)
 
-Not fully optimized yet but generally scales better with larger stroke counts (still varies depending on archetype) and is less performant in real time due to potentially having more stroke arrangements to score.
+Not fully optimized but real time speed varies depending on archetype, less performant than other polynomial time algorithms due to potentially having more stroke arrangements to score.
 Goal: Remove the necessity of scoring multiple stroke orders
 
 Methodology: Populate multiple stroke maps with the smallest errors without conflict as constants
@@ -378,12 +378,12 @@ def fourth_heuristic():
         const_vals = sorter[np.searchsorted(smallerrs, const_indices, sorter=sorter)]
         base_stroke_map[const_indices] = const_vals
         perm_indices = u[np.flatnonzero(c > 1)] # find indices of overlapping stroke pairings
-        conflicts = dict(zip(perm_indices, (np.flatnonzero(smallerrs == perm_index) for perm_index in perm_indices))) # a dict of conflicting smallest error indexes. the indexes of the potential stroke mapping are the keys and the potential values are the array value
+        conflicts = dict(zip(perm_indices, (np.flatnonzero(smallerrs == perm_index) for perm_index in perm_indices))) # a dict of conflicting smallest error indices. the indices of the potential stroke mapping are the keys and the potential values are the array value
         # = item for item, count in Counter(smallerrs).items() if count > 1
         perm_list = []
         for p in conflicts.values():
-            perm_list.append(permutations(p))
-        for perm in product(*perm_list):
+            perm_list.append(itertools.permutations(p))
+        for perm in itertools.product(*perm_list):
             s_map = np.copy(base_stroke_map)
             for (i, c) in enumerate(conflicts.keys()): # set the potential index
                 s_map[c] = perm[i][0]
@@ -394,7 +394,7 @@ def fourth_heuristic():
             for num in range(len(ref_geometry)): # find the missing stroke map vals
                 if not num in s_map:
                     missing_nums.append(num)
-            for missing_perm in permutations(missing_nums): # fill in the missing vals
+            for missing_perm in itertools.permutations(missing_nums): # fill in the missing vals
                 final_map = np.copy(s_map)
                 final_map[final_map == -1] = missing_perm
                 stroke_maps.append(final_map)
@@ -421,7 +421,7 @@ def third_heuristic2():
         #np.bincount()
         smallerrs = np.min(error_maps, axis=1) # Get the smallest error for every row
         smallerr_count = len(ref)-np.sum(counts2[counts2>1]-1)
-        for priority in permutations(range(0, len(ref_geometry))): # Loop over every possible stroke priority
+        for priority in itertools.permutations(range(0, len(ref_geometry))): # Loop over every possible stroke priority
             c = np.count_nonzero(smallerrs == error_maps[np.arange(len(error_maps)), priority]) # Get the number of elements from smallerrs present in this stroke priority
             if c > smallerr_count:
                 smallerr_count = c
@@ -434,6 +434,51 @@ def third_heuristic2():
             heuristic_score = getXmlScore(heuristic_xml)
             compare_scores.append(heuristic_score)
         heuristic_scores[f_name] = max(compare_scores)
+    return heuristic_scores
+
+"""
+Single stroke order implementation of fourth heuristic
+"""
+def fourth_heuristic2():
+    ref_geometry, ref_progress_percentage, output_size = ref_data
+    g_data, _, base_data, stroke_sets, _, f_names = char_data
+    heuristic_scores = {}
+    for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
+        strokes, p_strokes = geometry_length
+        error_maps = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
+        smallerrs = np.argmin(error_maps, axis=1) #[stroke matrix row]=stroke matrix col
+        stroke_maps = []
+        base_stroke_map = np.full(len(ref_geometry), -1, dtype=int)#np.empty(len(ref), dtype=int)
+        #u, c = np.unique(smallerrs, return_counts=True)
+        counts = np.bincount(smallerrs)
+        u = counts.nonzero()[0]
+        c = counts[u]
+        extraneous = np.flatnonzero(u >= len(ref_geometry)) # in case of marks, remove extraneous strokes
+        u = np.delete(u, extraneous)
+        c = np.delete(c, extraneous)
+        const_indices = u[np.flatnonzero(c == 1)] # find indices of non-overlapping stroke pairings, then set them as constants in base stroke map
+        sorter = np.argsort(smallerrs)
+        const_vals = sorter[np.searchsorted(smallerrs, const_indices, sorter=sorter)]
+        base_stroke_map[const_indices] = const_vals
+        perm_indices = u[np.flatnonzero(c > 1)] # find indices of overlapping stroke pairings
+        conflicts = dict(zip(perm_indices, (np.flatnonzero(smallerrs == perm_index) for perm_index in perm_indices))) # a dict of conflicting smallest error indices. the indices of the potential stroke mapping are the keys and the potential values are the array value
+        # Find a single stroke order by choosing the conflicting indices with:
+        # The smallest total error? Probably not because it needs perms
+        # The smallest of the conflicting errors?
+        # The order of the smallest error compared to others from its row?
+        # Maybe even the smallest difference between the smallest error and next smallest error?
+        # Also there should be a specific priority for filling missing nums (probably by smallest error)
+        for k in conflicts.keys():
+            compare_vals = []
+            for v in conflicts[k]:
+                compare_vals.append(error_maps[v][k])
+            base_stroke_map[k] = np.argwhere(error_maps == min(compare_vals))[0][0]
+        r = np.arange(len(ref_geometry))
+        missing_nums = r[np.searchsorted(r, np.setdiff1d(r, s_map))]
+        for missing_num in missing_nums:
+            error_maps[missing_num] = 
+            base_stroke_map[] = np.argwhere(error_maps == min(compare_vals))[0][0]
+        base_stroke_map[base_stroke_map == -1]
     return heuristic_scores
 
 """
@@ -450,21 +495,21 @@ def dyn():
     g_data, _, base_data, stroke_sets, _, f_names = char_data
     heuristic_scores = {}
     for (geometry_length, bases, stroke_set, f_name) in zip(g_data, base_data, stroke_sets, f_names):
-        stroke_priority = permutations(range(0, len(ref)))
+        stroke_priority = itertools.permutations(range(0, len(ref)))
         compare_scores = []
         strokes, p_strokes = geometry_length
         b = 0
         stroke_maps = np.empty((0, len(ref)), int)
         #j = 0
         # Find candidate stroke orders
-        #fromiter() = [(), (), (), etc.] then get indexes at values for each priority
+        #fromiter() = [(), (), (), etc.] then get indices at values for each priority
         for priority in stroke_priority:
             error_maps = strokeErrorMatrix(strokes, ref, p_strokes, p_ref)
             stroke_map = np.full(len(strokes), -1)
             for i in priority:
                 smallerror = np.argmin(error_maps[i]) # retrieve index of smallest error for current archetype stroke
                 while(stroke_map[smallerror]!=-1):
-                    # change small error so that we do not repeat over indexes that are already taken
+                    # change small error so that we do not repeat over indices that are already taken
                     # just keeps repeating until we land on an index that doesn't already have a value in its place
                     error_maps[i][smallerror] = 10000
                     smallerror = np.argmin(error_maps[i])
