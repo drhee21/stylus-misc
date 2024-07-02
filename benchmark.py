@@ -352,6 +352,7 @@ def heuristic_comb():
 Fourth heuristic algorithm: O(n^2)
 
 Not fully optimized yet but generally scales better with larger stroke counts (still varies depending on archetype) and is less performant in real time due to potentially having more stroke arrangements to score.
+Goal: Remove the necessity of scoring multiple stroke orders
 
 Methodology: Populate multiple stroke maps with the smallest errors without conflict as constants
 """
@@ -364,20 +365,20 @@ def fourth_heuristic():
         error_maps = strokeErrorMatrix(strokes, ref_geometry, p_strokes, ref_progress_percentage)
         smallerrs = np.argmin(error_maps, axis=1) #[stroke matrix row]=stroke matrix col
         stroke_maps = []
-        base_stroke_map = np.full(len(ref_geometry), -1, dtype=int)#np.empty(len(ref), dtype=int)#
+        base_stroke_map = np.full(len(ref_geometry), -1, dtype=int)#np.empty(len(ref), dtype=int)
         #u, c = np.unique(smallerrs, return_counts=True)
         counts = np.bincount(smallerrs)
         u = counts.nonzero()[0]
         c = counts[u]
-        extraneous = np.argwhere(u >= len(ref_geometry)).flatten() # in case of marks, remove extraneous strokes
+        extraneous = np.flatnonzero(u >= len(ref_geometry)) # in case of marks, remove extraneous strokes
         u = np.delete(u, extraneous)
         c = np.delete(c, extraneous)
-        const_indices = u[np.argwhere(c == 1).flatten()] # find indices of non-overlapping stroke pairings, then set them as constants in base stroke map
+        const_indices = u[np.flatnonzero(c == 1)] # find indices of non-overlapping stroke pairings, then set them as constants in base stroke map
         sorter = np.argsort(smallerrs)
         const_vals = sorter[np.searchsorted(smallerrs, const_indices, sorter=sorter)]
         base_stroke_map[const_indices] = const_vals
-        perm_indices = u[np.argwhere(c > 1).flatten()] # find indices of overlapping stroke pairings
-        conflicts = dict(zip(perm_indices, (np.argwhere(smallerrs == perm_index).flatten() for perm_index in perm_indices))) # a dict of conflicting smallest error indexes. the indexes of the potential stroke mapping are the keys and the potential values are the array value
+        perm_indices = u[np.flatnonzero(c > 1)] # find indices of overlapping stroke pairings
+        conflicts = dict(zip(perm_indices, (np.flatnonzero(smallerrs == perm_index) for perm_index in perm_indices))) # a dict of conflicting smallest error indexes. the indexes of the potential stroke mapping are the keys and the potential values are the array value
         # = item for item, count in Counter(smallerrs).items() if count > 1
         perm_list = []
         for p in conflicts.values():
@@ -386,6 +387,9 @@ def fourth_heuristic():
             s_map = np.copy(base_stroke_map)
             for (i, c) in enumerate(conflicts.keys()): # set the potential index
                 s_map[c] = perm[i][0]
+            #r = np.arange(len(ref_geometry))
+            #missing_nums = r[np.searchsorted(r, np.setdiff1d(r, s_map))]
+            #missing_nums = np.where(~pd.Index(pd.unique(s_map)).get_indexer(r) >= 0)[0]
             missing_nums = []
             for num in range(len(ref_geometry)): # find the missing stroke map vals
                 if not num in s_map:
@@ -502,7 +506,7 @@ def format_benchmarks(funcs, benchmarks, wins, total, trials):
         print(f"{f.__name__} scored {w} out of {total} genes accurately.")
 
 ref_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/Reference' # archetype directory
-data_dir = "genes"#f'{str(Path.home())}/Stylus_Scoring_Generalization/NewGenes' # gene directory
+data_dir = f'{str(Path.home())}/Stylus_Scoring_Generalization/NewGenes' # gene directory
 
 timeit.template = """
 def inner(_it, _timer{init}):
